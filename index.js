@@ -5,6 +5,7 @@ const fs = require('fs');
 const EventEmitter = require('events');
 const request = require('request-promise');
 const _ = require('lodash');
+const codegen = require('echoprint-codegen');
 
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
