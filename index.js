@@ -3,6 +3,11 @@ const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
 const EventEmitter = require('events');
+const request = require('request-promise');
+const _ = require('lodash');
+
+// API keys
+const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
 
 var at3 = {};
 
@@ -129,5 +134,292 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
 
     return progressEmitter;
 };
+
+/**
+ * Try to find to title and artist from a string
+ * (example: a YouTube video title)
+ * @param query string
+ * @param exact boolean Can the query be modified or not
+ * @param last boolean Last call
+ * @param v boolean Verbose
+ */
+at3.guessTrackFromString = function(query, exact, last, v) {
+    if (exact === undefined) {
+        exact = false;
+    }
+    if (last === undefined) {
+        last = false;
+    }
+    if (v === undefined) {
+        v = false;
+    }
+
+    if (v) {
+        console.log("Query: ", query);
+    }
+
+    var searchq = query;
+    if (!exact) {
+        searchq = searchq.replace(/\(.*\)/g, '');
+		searchq = searchq.replace(/\[.*\]/g, '');
+		searchq = searchq.replace(/lyric(s?)|parole(s?)/ig, '');
+    }
+
+    var requests = [];
+    var infos = {
+        title: null,
+        artistName: null,
+    };
+
+    // We search on Echonest, Deezer and iTunes
+    // Echonest
+    var requestEchonest = request({
+        url: 'http://developer.echonest.com/api/v4/song/search?api_key=' + API_ECHONEST_KEY + '&format=json&results=10&bucket=id:7digital-US&bucket=audio_summary&bucket=tracks&combined=' + encodeURIComponent(searchq),
+        json: true
+    }).then(function (body) {
+        var title, artistName, tempTitle;
+        _.forEach(body.response.songs, function (s) {
+			if (!title) {
+				if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artist_name), 'ig'))) {
+					if (delArtist(s.artist_name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig'))) {
+						artistName = s.artist_name;
+						title = s.title;
+					} else if (!artistName) {
+						artistName = s.artist_name;
+						tempTitle = s.title;
+					}
+				}
+			}
+		});
+        if (title && artistName) {
+            infos.title = title;
+            infos.artistName = artistName;
+        }
+        if (v) {
+            console.log("Echonest answer: ", title, '-', artistName);
+        }
+    });
+
+    // Deezer
+    var requestDeezer = request({
+        url: 'http://api.deezer.com/2.0/search?q=' + encodeURIComponent(searchq),
+        json: true
+    }).then(function (body) {
+        var title, artistName, tempTitle;
+        _.forEach(body.data, function (s) {
+			if (!title) {
+				if (vsimpleName(searchq,exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
+					if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig')) || vsimpleName(s.title).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
+						artistName = s.artist.name;
+						title = s.title;
+					} else if(!artistName) {
+						artistName = s.artist.name;
+						tempTitle = s.title;
+					}
+				}
+			}
+		});
+        if (title && artistName) {
+            infos.title = title;
+            infos.artistName = artistName;
+        }
+        if (v) {
+            console.log("Deezer answer: ", title, '-', artistName);
+        }
+    });
+
+    // iTunes
+    var requestiTunes = request({
+        url: 'https://itunes.apple.com/search?media=music&term=' + encodeURIComponent(searchq),
+        json: true
+    }).then(function (body) {
+        var title, artistName, tempTitle;
+        _.forEach(body.results, function (s) {
+			if (!title) {
+				if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artistName), 'gi'))) {
+					if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackName), 'gi'))) {
+						artistName = s.artistName;
+						title = s.trackName;
+					} else if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
+						artistName = s.artistName;
+						title = s.trackCensoredName;
+					} else if(!artistName) {
+						artistName = s.artistName;
+						temp_title = s.trackName;
+					}
+				}
+			}
+		});
+        if (title && artistName) {
+            infos.title = title;
+            infos.artistName = artistName;
+        }
+        if (v) {
+            console.log("iTunes answer: ", title, '-', artistName);
+        }
+    });
+
+    requests.push(requestEchonest);
+    requests.push(requestDeezer);
+    requests.push(requestiTunes);
+
+    return Promise.all(requests).then(function() {
+        if (!last && (!infos.title || !infos.artistName)) {
+            searchq = searchq.replace(/f(ea)?t(\.)? [^-]+/ig,' ');
+			return at3.guessTrackFromString(searchq, false, true, v);
+        }
+        return infos;
+    });
+
+};
+
+
+/**
+ * Retrieve informations about a track from artist and title
+ * @param title
+ * @param artistName
+ * @param exact boolean Exact search or not
+ * @param v boolean Verbose
+ */
+at3.retrieveTrackInformations = function (title, artistName, exact, v) {
+    if (exact === undefined) {
+        exact = false;
+    }
+    if (v === undefined) {
+        v = false;
+    }
+
+    if (!exact) {
+	    title = title.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
+	}
+
+    var infos = {
+        title: title,
+        artistName: artistName
+    };
+
+    var requests = [];
+
+    var requestDeezer = request({
+        url: 'http://api.deezer.com/2.0/search?q=' + encodeURIComponent(artistName + ' ' + title),
+        json: true
+    }).then(function (body) {
+        var deezerInfos;
+        _.forEach(body.data, function (s) {
+        	if(!infos.deezerId && imatch(vsimpleName(title), vsimpleName(s.title)) && imatch(vsimpleName(artistName), vsimpleName(s.artist.name))) {
+        		infos.deezerId = s.id;
+                deezerInfos = _.clone(s);
+        	}
+        });
+        if (infos.deezerId) {
+            infos.artistName = deezerInfos.artist.name;
+            infos.title = deezerInfos.title;
+
+            return request({
+                url: 'http://api.deezer.com/2.0/track/' + infos.deezerId,
+                json: true
+            }).then(function (trackInfos) {
+                infos.position = trackInfos.track_position;
+        		infos.duration = trackInfos.duration;
+        		infos.deezerAlbum = trackInfos.album.id;
+
+                return request({
+                    url: 'http://api.deezer.com/2.0/album/' + infos.deezerAlbum,
+                    json: true
+                });
+            }).then(function (albumInfos) {
+                infos.album = albumInfos.title;
+        		infos.releaseDate = albumInfos.release_date;
+        		infos.nbTracks = albumInfos.tracks.data.length;
+                infos.genreId = albumInfos.genre_id;
+
+                return request({
+                    url: albumInfos.cover + '?size=big',
+                    method: "HEAD",
+                    resolveWithFullResponse: true
+                });
+            }).then(function (responseCover) {
+        		infos.cover = responseCover.request.uri.href.replace('400x400', '600x600');
+                
+                return request({
+                    url: 'http://api.deezer.com/2.0/genre/' + infos.genreId,
+                    json: true
+                });
+            }).then(function (genreInfos) {
+                infos.genre = genreInfos.name;
+
+                if (v) {
+                    console.log("Deezer infos: ", infos);
+                }
+            });
+        }
+    });
+
+    var requestiTunes = request({
+        url: 'https://itunes.apple.com/search?media=music&term=' + encodeURIComponent(artistName + ' ' + title),
+        json: true
+    }).then(function (body) {
+        var itunesInfos;
+        _.forEach(body.results, function (s) {
+			if (!infos.itunesId && (imatch(vsimpleName(title), vsimpleName(s.trackName)) || imatch(vsimpleName(title), vsimpleName(s.trackCensoredName))) && imatch(vsimpleName(artistName), vsimpleName(s.artistName))) {
+				infos.itunesId = s.trackId;
+				itunesInfos = _.clone(s);
+			}
+		});
+		if (!infos.deezerId && itunesInfos) {
+            infos.artistName = itunesInfos.artistName;
+            if (imatch(vsimpleName(infos.title), vsimpleName(itunesInfos.trackName))) {
+                infos.title = itunesInfos.trackName;
+            } else {
+                infos.title = itunesInfos.trackCensoredName;
+            }
+			infos.itunesAlbum = itunesInfos.collectionId;
+			infos.position = itunesInfos.trackNumber;
+			infos.nbTracks = itunesInfos.trackCount;
+			infos.album = itunesInfos.collectionName;
+			infos.releaseDate = itunesInfos.releaseDate.replace(/T.+/, '');
+			infos.cover = itunesInfos.artworkUrl100.replace('100x100', '200x200');
+			infos.genre = itunesInfos.primaryGenreName;
+		}
+
+        if (v) {
+            console.log("iTunes infos: ", itunesInfos);
+        }
+    });
+
+    requests.push(requestDeezer);
+    requests.push(requestiTunes);
+
+    return Promise.all(requests).then(function () {
+        return infos;
+    });
+};
+
+function imatch(textSearched, text) {
+    return text.match(new RegExp(textSearched, 'gi'));
+}
+function vsimpleName(text, exact) {
+    if (exact === undefined) {
+        exact = false;
+    }
+    text = text.toLowerCase();
+    if (!exact) {
+        // text = text.replace('feat', '');
+    }
+    text = text.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
+    text = text.replace(/[^a-zA-Z0-9]/ig, '');
+    return text;
+}
+function delArtist(artist, text, exact) {
+    if (exact === undefined) {
+        exact = false;
+    }
+    if(vsimpleName(artist).length <= 2) { // Artist with a very short name (Mathieu Chedid - M)
+        return vsimpleName(text, exact);
+    } else {
+        // [TODO] Improve, escape regex special caracters in vsimpleName(artist)
+        return vsimpleName(text, exact).replace(new RegExp(vsimpleName(artist),'ig'), '');
+    }
+}
 
 module.exports = at3;

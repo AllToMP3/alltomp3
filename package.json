@@ -30,6 +30,8 @@
   "homepage": "https://github.com/AllToMP3/alltomp3#readme",
   "dependencies": {
     "fluent-ffmpeg": "^2.0.1",
+    "lodash": "^4.5.0",
+    "request-promise": "^2.0.1",
     "youtube-dl": "^1.10.5"
   }
 }
