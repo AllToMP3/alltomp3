@@ -290,7 +290,7 @@ at3.guessTrackFromFile = function (file) {
     return new Promise(function (resolve, reject) {
         acoustid(file, { key: API_ACOUSTID }, function (err, results) {
             if (err || results.length === 0) {
-                reject();
+                resolve({});
                 return;
             }
             resolve({
