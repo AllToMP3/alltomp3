@@ -36,4 +36,8 @@ const alltomp3 = require('.');
 //     alltomp3.tagFile('./test.mp3', infos);
 // });
 
-alltomp3.downloadAndTagSingleURL('https://www.youtube.com/watch?v=YykjpeuMNEk', true);
+// alltomp3.downloadAndTagSingleURL('https://www.youtube.com/watch?v=YykjpeuMNEk', true);
+
+alltomp3.findVideo("writing's on the wall").then(function(results) {
+    alltomp3.downloadAndTagSingleURL(results[0].url, true);
+});

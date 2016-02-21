@@ -15,6 +15,7 @@ const crypto = require('crypto');
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
 const API_ACOUSTID = 'lm59lNN597';
+const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 
 var at3 = {};
 
@@ -409,6 +410,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
             infos.cover = itunesInfos.artworkUrl100.replace('100x100', '200x200');
             infos.genre = itunesInfos.primaryGenreName;
             infos.discNumber = itunesInfos.discNumber;
+            infos.duration = itunesInfos.trackTimeMillis/1000;
         }
 
         if (v) {
@@ -444,44 +446,39 @@ at3.tagFile = function (file, infos) {
         meta.trackTotal = infos.nbTracks;
     }
     if (infos.discNumber) {
-        meta.disc = infos.disc;
+        meta.disc = infos.discNumber;
     }
     if (infos.releaseDate) {
         meta.year = (/[0-9]{4}/.exec(infos.releaseDate))[0];
     }
     if (infos.genre) {
-        meta.genre = infos.genre.replace(/\/.+$/g, '');
+        meta.genre = infos.genre.replace(/\/.+/g, '');
     }
 
-    var updateInfos = new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, reject) {
         eyed3.updateMeta(file, meta, function (err) {
             if (err) {
                 console.log(err);
             }
-            resolve();
+            if (infos.cover) {
+                var coverPath = file + '.cover.jpg';
+
+                requestNoPromise(infos.cover, function () {
+                    eyed3.updateMeta(file, {image: coverPath}, function (err) {
+                        if (err) {
+                            console.log("image error: ", err);
+                        }
+                        fs.unlinkSync(coverPath);
+
+                        resolve();
+                    });
+                }).pipe(fs.createWriteStream(coverPath));
+            } else {
+                resolve();
+            }
         });
     });
 
-    var updateCover = new Promise(function (resolve, reject) {
-        if (infos.cover) {
-            var coverPath = file + '.cover.jpg';
-
-            requestNoPromise(infos.cover, function () {
-                eyed3.updateMeta(file, {image: coverPath}, function (err) {
-                    if (err) {
-                        console.log("image error: ", err);
-                    }
-                    fs.unlinkSync(coverPath);
-
-                    resolve();
-                });
-            }).pipe(fs.createWriteStream(coverPath));
-        } else {
-            resolve();
-        }
-    });
-
-    return Promise.all([updateInfos, updateCover]);
 };
 
 /**
@@ -578,7 +575,7 @@ at3.downloadAndTagSingleURL = function (url, v) {
                     console.log("Infos from string score: ", scoreFromString);
                 }
 
-                if (scoreFromFile < (scoreFromString + Math.ceil(simpleName(videoTitle).length/10.0))) {
+                if (infosFromFile.cover && scoreFromFile < (scoreFromString + Math.ceil(simpleName(videoTitle).length/10.0))) {
                     infos = infosFromFile;
                 }
             }
@@ -591,6 +588,220 @@ at3.downloadAndTagSingleURL = function (url, v) {
                 fs.rename(tempFile, infos.artistName + ' - ' + infos.title + '.mp3');
             });
         });
+    });
+};
+
+/**
+ * Try to find the best video matching a request
+ * @param query string
+ * @param v boolean Verbosity
+ */
+at3.findVideo = function(query, v) {
+    if (v === undefined) {
+        v = false;
+    }
+
+    /**
+     * Remove useless information in the title
+     * like (audio only), (lyrics)...
+     * @param title string
+     * @return string
+     */
+    function improveTitle(title) {
+        var useless = [
+            'audio only',
+            'audio',
+            'paroles/lyrics',
+            'lyrics/paroles',
+            'with lyrics',
+            'w/lyrics',
+            'w / lyrics',
+            'avec paroles',
+            'avec les paroles',
+            'avec parole',
+            'lyrics',
+            'paroles',
+            'parole',
+            'radio edit.',
+            'radio edit',
+            'radio-edit',
+            'shazam version',
+            'shazam v...',
+            'music video',
+            'clip officiel',
+            'officiel',
+            'new song',
+            'official video',
+            'official'
+        ];
+
+        _.forEach(useless, function (u) {
+            title = title.replace(new RegExp('((\\\(|\\\[)?)( ?)' + u + '( ?)((\\\)|\\\])?)', 'gi'), '');
+        });
+
+        title = title.replace(new RegExp('(\\\(|\\\[)( ?)hd( ?)(\\\)|\\\])', 'gi'), '');
+        title = title.replace(new RegExp('hd','gi'), '');
+        title = _.trim(title);
+
+        return title;
+    }
+
+    /**
+     * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
+     * in seconds
+     */
+    function parseTime(time) {
+        time = time.replace('PT','');
+        time = time.replace('S', '');
+        if (/M/.test(time)) {
+            time = time.split('M');
+            return (parseInt(time[0])*60 + parseInt(time[1]));
+        } else {
+            return parseInt(time[0]);
+        }
+    }
+
+    /**
+     * Modify strings to compare it more efficently
+     * example: Maître Gims = maitre gims
+     * @param text string
+     * @return string
+     */
+    function easyCompare(text) {
+        return _.deburr(_.toLower(text));
+    }
+
+    /**
+     * Returns the score of a video, comparing to the request
+     * @param q string The query
+     * @param video object
+     * @param largestRealLike
+     * @param largestViews
+     * @return Object
+     */
+    function score(q, video, largestRealLike, largestViews, guessSong) {
+        // weight of each argument
+        var weights = {
+            title: 20,
+            hd: 0.3,
+            duration: 14,
+            views: 10,
+            realLike: 100
+        };
+
+        var duration = guessSong.duration || video.duration;
+
+        var easyQ = easyCompare(q);
+
+        // Score for title
+        var title = _.toLower(video.title);
+        var stitle;
+        if (title.split(' - ').length == 1) {
+            var expTitle = title.split(' - ');
+            var title2 = expTitle[1] + ' - ' + expTitle[0];
+            sTitle = Math.min(levenshtein.get(easyQ, easyCompare(title)), levenshtein.get(easyQ, easyCompare(title2)));
+        } else {
+            sTitle = levenshtein.get(easyQ, easyCompare(title));
+        }
+
+        var videoScore = {
+            title: sTitle*weights.title,
+            hd: video.hd*weights.hd,
+            duration: Math.abs(video.duration - duration)*weights.duration,
+            views: (video.views/largestViews)*weights.views,
+            realLike: (video.realLike/largestRealLike)*weights.realLike
+        };
+
+        var preVideoScore = videoScore.views + videoScore.realLike - videoScore.title - videoScore.duration;
+        preVideoScore = preVideoScore + Math.abs(preVideoScore)*videoScore.hd;
+
+        return preVideoScore;
+    }
+
+    return new Promise(function (resolve, reject) {
+
+        // We try to find the exact song
+        // (usefull to compare the duration for example)
+        var guessSong = {};
+        var guessSongRequest = at3.guessTrackFromString(query, false, false, v).then(function (guessStringInfos) {
+            if (guessStringInfos.title && guessStringInfos.artistName) {
+                return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
+            } else {
+                return Promise.resolve({});
+            }
+        }).then(function(guessStringInfos) {
+            guessSong = guessStringInfos;
+        });
+
+        var results = [];
+
+        // We simply search on YouTube
+        var requestYouTubeSearch = request({
+            url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&maxResults=7&q=' + encodeURIComponent(query),
+            json: true
+        }).then(function (body) {
+            if (!body.items || body.items.length === 0) {
+                return reject();
+            }
+
+            var requests = [guessSongRequest];
+
+            _.forEach(body.items, function (s) {
+                if (!s.id.videoId) {
+                    return;
+                }
+
+                var req = request({
+                    url: 'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' + API_GOOGLE + '&id=' + s.id.videoId,
+                    json: true
+                }).then(function (video) {
+                    video = video.items[0];
+                    var ratio = 1.0;
+                    if (video.statistics.dislikeCount > 0) {
+                        ratio = video.statistics.likeCount / video.statistics.dislikeCount;
+                    }
+                    if (ratio === 0) {
+                        ratio = 1;
+                    }
+                    var realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
+
+                    results.push({
+                        id: video.id,
+                        url: 'https://www.youtube.com/watch?v=' + video.id,
+                        title: improveTitle(video.snippet.title),
+                        hd: (video.contentDetails.definition == 'hd'),
+                        duration: parseTime(video.contentDetails.duration),
+                        views: video.statistics.viewCount,
+                        realLike: realLike
+                    });
+                });
+
+                requests.push(req);
+            });
+
+            return Promise.all(requests);
+        }).then(function () {
+
+            var largestRealLike = _.reduce(results, function (v, r) {
+                if (r.realLike > v) {
+                    return r.realLike;
+                }
+                return v;
+            }, 0);
+            var largestViews = _.reduce(results, function (v, r) {
+                if (r.views > v) {
+                    return r.views;
+                }
+                return v;
+            }, 0);
+
+            _.forEach(results, function(r) {
+                r.score = score(query, r, largestRealLike, largestViews, guessSong);
+            });
+
+            resolve(_.reverse(_.sortBy(results, 'score')));
+        });
+
     });
 };
 
