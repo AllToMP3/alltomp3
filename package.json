@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/AllToMP3/alltomp3#readme",
   "dependencies": {
-    "echoprint-codegen": "^0.1.5",
+    "acoustid": "^1.2.1",
     "fluent-ffmpeg": "^2.0.1",
     "lodash": "^4.5.0",
     "request-promise": "^2.0.1",

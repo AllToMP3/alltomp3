@@ -5,10 +5,11 @@ const fs = require('fs');
 const EventEmitter = require('events');
 const request = require('request-promise');
 const _ = require('lodash');
-const codegen = require('echoprint-codegen');
+const acoustid = require('acoustid');
 
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
+const API_ACOUSTID = 'lm59lNN597';
 
 var at3 = {};
 
@@ -274,6 +275,25 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 
 };
 
+/**
+ * Try to guess title and artist from mp3 file
+ * @param file
+ */
+at3.guessTrackFromFile = function (file) {
+    return new Promise(function (resolve, reject) {
+        acoustid(file, { key: API_ACOUSTID }, function (err, results) {
+            if (err || results.length === 0) {
+                reject();
+                return;
+            }
+            resolve({
+                title: results[0].recordings[0].title,
+                artistName: results[0].recordings[0].artists[0].name
+            });
+        });
+    });
+};
+
 
 /**
  * Retrieve informations about a track from artist and title
@@ -341,7 +361,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
                 });
             }).then(function (responseCover) {
         		infos.cover = responseCover.request.uri.href.replace('400x400', '600x600');
-                
+
                 return request({
                     url: 'http://api.deezer.com/2.0/genre/' + infos.genreId,
                     json: true

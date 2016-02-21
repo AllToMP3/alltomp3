@@ -6,7 +6,7 @@ const alltomp3 = require('.');
 // alltomp3.getInfosWithYoutubeDl('https://www.youtube.com/watch?v=e74VMNgARvY', function(infos) {
 //     console.log(infos);
 // });
-// var dl = alltomp3.downloadSingleURL('https://soundcloud.com/taylorythm/coda', 'test.mp3', '320k');
+// var dl = alltomp3.downloadSingleURL('https://www.youtube.com/watch?v=e74VMNgARvY', 'test.mp3', '320k');
 // dl.on('download', function(infos) {
 //     process.stdout.cursorTo(0);
 //     process.stdout.clearLine(1);
@@ -25,6 +25,10 @@ const alltomp3 = require('.');
 // alltomp3.guessTrackFromString('C2C - Happy Ft. D.Martin', false, false, true);
 // alltomp3.guessTrackFromString('David Guetta - Bang My Head (Official Video) feat Sia & Fetty Wap', false, false, true);
 // alltomp3.guessTrackFromString('David Guetta - Hey Mama (Official Video) ft Nicki Minaj, Bebe Rexha & Afrojack', false, false, true);
-alltomp3.retrieveTrackInformations('On Top of the World', 'Imagine Dragons').then(function (infos) {
-    console.log("Infos: ", infos);
+// alltomp3.retrieveTrackInformations('On Top of the World', 'Imagine Dragons').then(function (infos) {
+//     console.log("Infos: ", infos);
+// });
+
+alltomp3.guessTrackFromFile('./test.mp3').then(function (infos) {
+    console.log(infos);
 });
