@@ -29,9 +29,11 @@ const alltomp3 = require('.');
 //     console.log("Infos: ", infos);
 // });
 
-alltomp3.guessTrackFromFile('./test.mp3').then(function (infos) {
-    return alltomp3.retrieveTrackInformations(infos.title, infos.artistName);
-}).then(function (infos) {
-    console.log(infos);
-    alltomp3.tagFile('./test.mp3', infos);
-});
+// alltomp3.guessTrackFromFile('./test.mp3').then(function (infos) {
+//     return alltomp3.retrieveTrackInformations(infos.title, infos.artistName);
+// }).then(function (infos) {
+//     console.log(infos);
+//     alltomp3.tagFile('./test.mp3', infos);
+// });
+
+alltomp3.downloadAndTagSingleURL('https://www.youtube.com/watch?v=YykjpeuMNEk', true);

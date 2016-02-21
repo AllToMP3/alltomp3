@@ -9,6 +9,7 @@ const _ = require('lodash');
 const acoustid = require('acoustid');
 const EyeD3 = require('eyed3');
 const eyed3 = new EyeD3({ eyed3_executable: 'eyeD3' });
+const levenshtein = require('fast-levenshtein');
 
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
@@ -89,14 +90,15 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
 /**
  * Get infos about an online video with youtube-dl
  * @param url
- * @param callback
  */
-at3.getInfosWithYoutubeDl = function(url, callback) {
-    var infos = youtubedl.getInfo(url, function (err, infos) {
-        callback({
-            title: infos.title,
-            author: infos.uploader,
-            picture: infos.thumbnail
+at3.getInfosWithYoutubeDl = function(url) {
+    return new Promise(function (resolve, reject) {
+        youtubedl.getInfo(url, function (err, infos) {
+            resolve({
+                title: infos.title,
+                author: infos.uploader,
+                picture: infos.thumbnail
+            });
         });
     });
 };
@@ -344,8 +346,8 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
                 json: true
             }).then(function (trackInfos) {
                 infos.position = trackInfos.track_position;
-        		infos.duration = trackInfos.duration;
-        		infos.deezerAlbum = trackInfos.album.id;
+                infos.duration = trackInfos.duration;
+                infos.deezerAlbum = trackInfos.album.id;
                 infos.discNumber = trackInfos.disk_number;
 
                 return request({
@@ -354,8 +356,8 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
                 });
             }).then(function (albumInfos) {
                 infos.album = albumInfos.title;
-        		infos.releaseDate = albumInfos.release_date;
-        		infos.nbTracks = albumInfos.tracks.data.length;
+                infos.releaseDate = albumInfos.release_date;
+                infos.nbTracks = albumInfos.tracks.data.length;
                 infos.genreId = albumInfos.genre_id;
 
                 return request({
@@ -364,7 +366,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
                     resolveWithFullResponse: true
                 });
             }).then(function (responseCover) {
-        		infos.cover = responseCover.request.uri.href.replace('400x400', '600x600');
+                infos.cover = responseCover.request.uri.href.replace('400x400', '600x600');
 
                 return request({
                     url: 'http://api.deezer.com/2.0/genre/' + infos.genreId,
@@ -391,21 +393,22 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
 				itunesInfos = _.clone(s);
 			}
 		});
-		if (!infos.deezerId && itunesInfos) {
+        if (!infos.deezerId && itunesInfos) {
             infos.artistName = itunesInfos.artistName;
             if (imatch(vsimpleName(infos.title), vsimpleName(itunesInfos.trackName))) {
                 infos.title = itunesInfos.trackName;
             } else {
                 infos.title = itunesInfos.trackCensoredName;
             }
-			infos.itunesAlbum = itunesInfos.collectionId;
-			infos.position = itunesInfos.trackNumber;
-			infos.nbTracks = itunesInfos.trackCount;
-			infos.album = itunesInfos.collectionName;
-			infos.releaseDate = itunesInfos.releaseDate.replace(/T.+/, '');
-			infos.cover = itunesInfos.artworkUrl100.replace('100x100', '200x200');
-			infos.genre = itunesInfos.primaryGenreName;
-		}
+            infos.itunesAlbum = itunesInfos.collectionId;
+            infos.position = itunesInfos.trackNumber;
+            infos.nbTracks = itunesInfos.trackCount;
+            infos.album = itunesInfos.collectionName;
+            infos.releaseDate = itunesInfos.releaseDate.replace(/T.+/, '');
+            infos.cover = itunesInfos.artworkUrl100.replace('100x100', '200x200');
+            infos.genre = itunesInfos.primaryGenreName;
+            infos.discNumber = itunesInfos.discNumber;
+        }
 
         if (v) {
             console.log("iTunes infos: ", itunesInfos);
@@ -446,7 +449,7 @@ at3.tagFile = function (file, infos) {
         meta.year = (/[0-9]{4}/.exec(infos.releaseDate))[0];
     }
     if (infos.genre) {
-        meta.genre = infos.genre;
+        meta.genre = infos.genre.replace(/\/.+$/g, '');
     }
     eyed3.updateMeta(file, meta, function (err) {
         if (err) {
@@ -455,7 +458,7 @@ at3.tagFile = function (file, infos) {
     });
 
     if (infos.cover) {
-        var coverPath = __dirname + '/cover.jpg';
+        var coverPath = file + '.cover.jpg';
         requestNoPromise(infos.cover, function () {
             eyed3.updateMeta(file, {image: coverPath}, function (err) {
                 if (err) {
@@ -467,7 +470,121 @@ at3.tagFile = function (file, infos) {
     }
 };
 
+/**
+ * Download and convert a single URL,
+ * retrieve and add tags to the MP3 file
+ * @param url
+ * @param v boolean Verbosity
+ */
+at3.downloadAndTagSingleURL = function (url, v) {
+    if (v === undefined) {
+        v = false;
+    }
+
+    var tempFile = 'test.mp3';
+
+    // Download and convert file
+    var dl = at3.downloadSingleURL(url, tempFile, '320k');
+
+    var infosFromString, infosFromFile, videoTitle;
+
+    // Try to find information based on video title
+    var getStringInfos = at3.getInfosWithYoutubeDl(url).then(function(videoInfos) {
+        infosFromString = {
+            title: videoInfos.title,
+            artistName: videoInfos.author,
+            cover: videoInfos.picture // [TODO] Create square image
+        };
+
+        videoTitle = videoInfos.title;
+
+        if (v) {
+            console.log("Video infos: ", infosFromString);
+        }
+
+        // [TODO] Emit event with these infos
+
+        return at3.guessTrackFromString(videoInfos.title, false, false, v);
+    }).then(function (guessStringInfos) {
+        if (guessStringInfos.title && guessStringInfos.artistName) {
+            return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
+        } else {
+            return new Promise(function (resolve, reject) {
+                resolve();
+            });
+        }
+    }).then(function (guessStringInfos) {
+        // [TODO] Emit event with these infos
+        if (guessStringInfos) {
+            infosFromString = guessStringInfos;
+            if (v) {
+                console.log("guessStringInfos: ", guessStringInfos);
+            }
+        } else {
+            if (v) {
+                console.log('Cannot retrieve detailed information from video title');
+            }
+        }
+    });
+
+    // Try to find information based on MP3 file when dl is finished
+    dl.once('end', function() {
+        var getFileInfos = at3.guessTrackFromFile(tempFile).then(function (guessFileInfos) {
+            if (guessFileInfos.title && guessFileInfos.artistName) {
+                return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
+            } else {
+                return new Promise(function (resolve, reject) {
+                    resolve();
+                });
+            }
+        }).then(function (guessFileInfos) {
+            if (guessFileInfos) {
+                infosFromFile = guessFileInfos;
+                if (v) {
+                    console.log("guessFileInfos: ", guessFileInfos);
+                }
+            } else {
+                if (v) {
+                    console.log('Cannot retrieve detailed information from MP3 file');
+                }
+            }
+        });
+
+        // [TODO] Improve network issue resistance
+        Promise.all([getStringInfos, getFileInfos]).then(function() {
+            var infos = infosFromString;
+            if (infosFromFile) {
+                var scoreFromFile = Math.min(
+                    levenshtein.get(simpleName(infosFromFile.title + ' ' + infosFromFile.artistName), simpleName(videoTitle)),
+                    levenshtein.get(simpleName(infosFromFile.artistName + ' ' + infosFromFile.title), simpleName(videoTitle))
+                );
+                var scoreFromString = Math.min(
+                    levenshtein.get(simpleName(infosFromString.title + ' ' + infosFromString.artistName), simpleName(videoTitle)),
+                    levenshtein.get(simpleName(infosFromString.artistName + ' ' + infosFromString.title), simpleName(videoTitle))
+                );
+
+                if (v) {
+                    console.log("Infos from file score: ", scoreFromFile);
+                    console.log("Infos from string score: ", scoreFromString);
+                }
+
+                if (scoreFromFile < (scoreFromString + Math.ceil(simpleName(videoTitle).length/10.0))) {
+                    infos = infosFromFile;
+                }
+            }
+
+            if (v) {
+                console.log('Final infos: ', infos);
+            }
+
+            // [TODO] Rename file
+            at3.tagFile(tempFile, infos);
+        });
+    });
+};
+
 function imatch(textSearched, text) {
+    // [TODO] Improve this function (use .test and espace special caracters + use it everywhere else)
     return text.match(new RegExp(textSearched, 'gi'));
 }
 function vsimpleName(text, exact) {
@@ -492,6 +609,9 @@ function delArtist(artist, text, exact) {
         // [TODO] Improve, escape regex special caracters in vsimpleName(artist)
         return vsimpleName(text, exact).replace(new RegExp(vsimpleName(artist),'ig'), '');
     }
+}
+function simpleName(text) {
+    return text.replace(/\(.+\)/g, '');
 }
 
 module.exports = at3;
