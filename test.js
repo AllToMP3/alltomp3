@@ -38,6 +38,7 @@ const alltomp3 = require('.');
 
 // alltomp3.downloadAndTagSingleURL('https://www.youtube.com/watch?v=YykjpeuMNEk', true);
 
-alltomp3.findVideo("writing's on the wall").then(function(results) {
-    alltomp3.downloadAndTagSingleURL(results[0].url, true);
+var title = "overwerk day break";
+alltomp3.findVideo(title).then(function(results) {
+    alltomp3.downloadAndTagSingleURL(results[0].url, true, title);
 });

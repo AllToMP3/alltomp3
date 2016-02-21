@@ -487,7 +487,7 @@ at3.tagFile = function (file, infos) {
 * @param url
 * @param v boolean Verbosity
 */
-at3.downloadAndTagSingleURL = function (url, v) {
+at3.downloadAndTagSingleURL = function (url, v, title) {
     if (v === undefined) {
         v = false;
     }
@@ -497,7 +497,7 @@ at3.downloadAndTagSingleURL = function (url, v) {
     // Download and convert file
     var dl = at3.downloadSingleURL(url, tempFile, '320k');
 
-    var infosFromString, infosFromFile, videoTitle;
+    var infosFromString, infosFromFile;
 
     // Try to find information based on video title
     var getStringInfos = at3.getInfosWithYoutubeDl(url).then(function(videoInfos) {
@@ -507,7 +507,9 @@ at3.downloadAndTagSingleURL = function (url, v) {
             cover: videoInfos.picture // [TODO] Create square image
         };
 
-        videoTitle = videoInfos.title;
+        if (title === undefined) {
+            title = videoInfos.title;
+        }
 
         if (v) {
             console.log("Video infos: ", infosFromString);
@@ -562,12 +564,12 @@ at3.downloadAndTagSingleURL = function (url, v) {
             var infos = infosFromString;
             if (infosFromFile) {
                 var scoreFromFile = Math.min(
-                    levenshtein.get(simpleName(infosFromFile.title + ' ' + infosFromFile.artistName), simpleName(videoTitle)),
-                    levenshtein.get(simpleName(infosFromFile.artistName + ' ' + infosFromFile.title), simpleName(videoTitle))
+                    levenshtein.get(simpleName(infosFromFile.title + ' ' + infosFromFile.artistName), simpleName(title)),
+                    levenshtein.get(simpleName(infosFromFile.artistName + ' ' + infosFromFile.title), simpleName(title))
                 );
                 var scoreFromString = Math.min(
-                    levenshtein.get(simpleName(infosFromString.title + ' ' + infosFromString.artistName), simpleName(videoTitle)),
-                    levenshtein.get(simpleName(infosFromString.artistName + ' ' + infosFromString.title), simpleName(videoTitle))
+                    levenshtein.get(simpleName(infosFromString.title + ' ' + infosFromString.artistName), simpleName(title)),
+                    levenshtein.get(simpleName(infosFromString.artistName + ' ' + infosFromString.title), simpleName(title))
                 );
 
                 if (v) {
@@ -575,7 +577,7 @@ at3.downloadAndTagSingleURL = function (url, v) {
                     console.log("Infos from string score: ", scoreFromString);
                 }
 
-                if (infosFromFile.cover && scoreFromFile < (scoreFromString + Math.ceil(simpleName(videoTitle).length/10.0))) {
+                if (infosFromFile.cover && scoreFromFile < (scoreFromString + Math.ceil(simpleName(title).length/10.0))) {
                     infos = infosFromFile;
                 }
             }
