@@ -4,8 +4,11 @@ const path = require('path');
 const fs = require('fs');
 const EventEmitter = require('events');
 const request = require('request-promise');
+const requestNoPromise = require('request');
 const _ = require('lodash');
 const acoustid = require('acoustid');
+const EyeD3 = require('eyed3');
+const eyed3 = new EyeD3({ eyed3_executable: 'eyeD3' });
 
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
@@ -343,6 +346,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
                 infos.position = trackInfos.track_position;
         		infos.duration = trackInfos.duration;
         		infos.deezerAlbum = trackInfos.album.id;
+                infos.discNumber = trackInfos.disk_number;
 
                 return request({
                     url: 'http://api.deezer.com/2.0/album/' + infos.deezerAlbum,
@@ -414,6 +418,53 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     return Promise.all(requests).then(function () {
         return infos;
     });
+};
+
+/**
+ * Add tags to MP3 file
+ * @param file
+ * @param infos
+ */
+at3.tagFile = function (file, infos) {
+    var meta = {
+        title: infos.title,
+        artist: infos.artistName
+    };
+    if (infos.album) {
+        meta.album = infos.album;
+    }
+    if (infos.position) {
+        meta.track = infos.position;
+    }
+    if (infos.nbTracks) {
+        meta.trackTotal = infos.nbTracks;
+    }
+    if (infos.discNumber) {
+        meta.disc = infos.disc;
+    }
+    if (infos.releaseDate) {
+        meta.year = (/[0-9]{4}/.exec(infos.releaseDate))[0];
+    }
+    if (infos.genre) {
+        meta.genre = infos.genre;
+    }
+    eyed3.updateMeta(file, meta, function (err) {
+        if (err) {
+            console.log(err);
+        }
+    });
+
+    if (infos.cover) {
+        var coverPath = __dirname + '/cover.jpg';
+        requestNoPromise(infos.cover, function () {
+            eyed3.updateMeta(file, {image: coverPath}, function (err) {
+                if (err) {
+                    console.log("image error: ", err);
+                }
+                fs.unlink(coverPath);
+            });
+        }).pipe(fs.createWriteStream(coverPath));
+    }
 };
 
 function imatch(textSearched, text) {

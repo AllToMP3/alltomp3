@@ -30,5 +30,8 @@ const alltomp3 = require('.');
 // });
 
 alltomp3.guessTrackFromFile('./test.mp3').then(function (infos) {
+    return alltomp3.retrieveTrackInformations(infos.title, infos.artistName);
+}).then(function (infos) {
     console.log(infos);
+    alltomp3.tagFile('./test.mp3', infos);
 });

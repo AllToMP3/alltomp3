@@ -30,6 +30,7 @@
   "homepage": "https://github.com/AllToMP3/alltomp3#readme",
   "dependencies": {
     "acoustid": "^1.2.1",
+    "eyed3": "https://github.com/AllToMP3/node-eyed3",
     "fluent-ffmpeg": "^2.0.1",
     "lodash": "^4.5.0",
     "request-promise": "^2.0.1",
