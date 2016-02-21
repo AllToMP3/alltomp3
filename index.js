@@ -20,10 +20,10 @@ const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 var at3 = {};
 
 /**
- * Download a single video with youtube-dl
- * @param url
- * @param outputFile
- */
+* Download a single video with youtube-dl
+* @param url
+* @param outputFile
+*/
 at3.downloadWithYoutubeDl = function(url, outputFile) {
     var download = youtubedl(url, ['-f', 'bestaudio']);
     const downloadEmitter = new EventEmitter();
@@ -61,38 +61,38 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
 };
 
 /**
- * Convert a outputFile in MP3
- * @param inputFile
- * @param outputFile
- * @param bitrate string
- */
+* Convert a outputFile in MP3
+* @param inputFile
+* @param outputFile
+* @param bitrate string
+*/
 at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
     const convertEmitter = new EventEmitter();
 
     var convert = ffmpeg(inputFile)
-        .audioBitrate(bitrate)
-        .audioCodec('libmp3lame')
-        .on('codecData', function(data) {
-            convertEmitter.emit('convert-start');
-        })
-        .on('progress', function(progress) {
-            convertEmitter.emit('convert-progress', {
-                progress: progress.percent
-            });
-        })
-        .on('end', function() {
-            fs.unlink(inputFile);
-            convertEmitter.emit('convert-end');
-        })
-        .save(outputFile);
+    .audioBitrate(bitrate)
+    .audioCodec('libmp3lame')
+    .on('codecData', function(data) {
+        convertEmitter.emit('convert-start');
+    })
+    .on('progress', function(progress) {
+        convertEmitter.emit('convert-progress', {
+            progress: progress.percent
+        });
+    })
+    .on('end', function() {
+        fs.unlink(inputFile);
+        convertEmitter.emit('convert-end');
+    })
+    .save(outputFile);
 
     return convertEmitter;
 };
 
 /**
- * Get infos about an online video with youtube-dl
- * @param url
- */
+* Get infos about an online video with youtube-dl
+* @param url
+*/
 at3.getInfosWithYoutubeDl = function(url) {
     return new Promise(function (resolve, reject) {
         youtubedl.getInfo(url, function (err, infos) {
@@ -106,11 +106,11 @@ at3.getInfosWithYoutubeDl = function(url) {
 };
 
 /**
- * Download a single URL in MP3
- * @param url
- * @param outputFile
- * @param bitrate
- */
+* Download a single URL in MP3
+* @param url
+* @param outputFile
+* @param bitrate
+*/
 at3.downloadSingleURL = function(url, outputFile, bitrate) {
     const progressEmitter = new EventEmitter();
     var tempFile = outputFile + '.video';
@@ -145,13 +145,13 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
 };
 
 /**
- * Try to find to title and artist from a string
- * (example: a YouTube video title)
- * @param query string
- * @param exact boolean Can the query be modified or not
- * @param last boolean Last call
- * @param v boolean Verbose
- */
+* Try to find to title and artist from a string
+* (example: a YouTube video title)
+* @param query string
+* @param exact boolean Can the query be modified or not
+* @param last boolean Last call
+* @param v boolean Verbose
+*/
 at3.guessTrackFromString = function(query, exact, last, v) {
     if (exact === undefined) {
         exact = false;
@@ -170,8 +170,8 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     var searchq = query;
     if (!exact) {
         searchq = searchq.replace(/\(.*\)/g, '');
-		searchq = searchq.replace(/\[.*\]/g, '');
-		searchq = searchq.replace(/lyric(s?)|parole(s?)/ig, '');
+        searchq = searchq.replace(/\[.*\]/g, '');
+        searchq = searchq.replace(/lyric(s?)|parole(s?)/ig, '');
     }
 
     var requests = [];
@@ -188,18 +188,18 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     }).then(function (body) {
         var title, artistName, tempTitle;
         _.forEach(body.response.songs, function (s) {
-			if (!title) {
-				if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artist_name), 'ig'))) {
-					if (delArtist(s.artist_name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig'))) {
-						artistName = s.artist_name;
-						title = s.title;
-					} else if (!artistName) {
-						artistName = s.artist_name;
-						tempTitle = s.title;
-					}
-				}
-			}
-		});
+            if (!title) {
+                if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artist_name), 'ig'))) {
+                    if (delArtist(s.artist_name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig'))) {
+                        artistName = s.artist_name;
+                        title = s.title;
+                    } else if (!artistName) {
+                        artistName = s.artist_name;
+                        tempTitle = s.title;
+                    }
+                }
+            }
+        });
         if (title && artistName) {
             infos.title = title;
             infos.artistName = artistName;
@@ -216,18 +216,18 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     }).then(function (body) {
         var title, artistName, tempTitle;
         _.forEach(body.data, function (s) {
-			if (!title) {
-				if (vsimpleName(searchq,exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
-					if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig')) || vsimpleName(s.title).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
-						artistName = s.artist.name;
-						title = s.title;
-					} else if(!artistName) {
-						artistName = s.artist.name;
-						tempTitle = s.title;
-					}
-				}
-			}
-		});
+            if (!title) {
+                if (vsimpleName(searchq,exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
+                    if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig')) || vsimpleName(s.title).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
+                        artistName = s.artist.name;
+                        title = s.title;
+                    } else if(!artistName) {
+                        artistName = s.artist.name;
+                        tempTitle = s.title;
+                    }
+                }
+            }
+        });
         if (title && artistName) {
             infos.title = title;
             infos.artistName = artistName;
@@ -244,21 +244,21 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     }).then(function (body) {
         var title, artistName, tempTitle;
         _.forEach(body.results, function (s) {
-			if (!title) {
-				if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artistName), 'gi'))) {
-					if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackName), 'gi'))) {
-						artistName = s.artistName;
-						title = s.trackName;
-					} else if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
-						artistName = s.artistName;
-						title = s.trackCensoredName;
-					} else if(!artistName) {
-						artistName = s.artistName;
-						temp_title = s.trackName;
-					}
-				}
-			}
-		});
+            if (!title) {
+                if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artistName), 'gi'))) {
+                    if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackName), 'gi'))) {
+                        artistName = s.artistName;
+                        title = s.trackName;
+                    } else if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
+                        artistName = s.artistName;
+                        title = s.trackCensoredName;
+                    } else if(!artistName) {
+                        artistName = s.artistName;
+                        temp_title = s.trackName;
+                    }
+                }
+            }
+        });
         if (title && artistName) {
             infos.title = title;
             infos.artistName = artistName;
@@ -275,7 +275,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     return Promise.all(requests).then(function() {
         if (!last && (!infos.title || !infos.artistName)) {
             searchq = searchq.replace(/f(ea)?t(\.)? [^-]+/ig,' ');
-			return at3.guessTrackFromString(searchq, false, true, v);
+            return at3.guessTrackFromString(searchq, false, true, v);
         }
         return infos;
     });
@@ -283,9 +283,9 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 };
 
 /**
- * Try to guess title and artist from mp3 file
- * @param file
- */
+* Try to guess title and artist from mp3 file
+* @param file
+*/
 at3.guessTrackFromFile = function (file) {
     return new Promise(function (resolve, reject) {
         acoustid(file, { key: API_ACOUSTID }, function (err, results) {
@@ -303,12 +303,12 @@ at3.guessTrackFromFile = function (file) {
 
 
 /**
- * Retrieve informations about a track from artist and title
- * @param title
- * @param artistName
- * @param exact boolean Exact search or not
- * @param v boolean Verbose
- */
+* Retrieve informations about a track from artist and title
+* @param title
+* @param artistName
+* @param exact boolean Exact search or not
+* @param v boolean Verbose
+*/
 at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     if (exact === undefined) {
         exact = false;
@@ -318,8 +318,8 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     }
 
     if (!exact) {
-	    title = title.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
-	}
+        title = title.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
+    }
 
     var infos = {
         title: title,
@@ -334,10 +334,10 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     }).then(function (body) {
         var deezerInfos;
         _.forEach(body.data, function (s) {
-        	if(!infos.deezerId && imatch(vsimpleName(title), vsimpleName(s.title)) && imatch(vsimpleName(artistName), vsimpleName(s.artist.name))) {
-        		infos.deezerId = s.id;
+            if(!infos.deezerId && imatch(vsimpleName(title), vsimpleName(s.title)) && imatch(vsimpleName(artistName), vsimpleName(s.artist.name))) {
+                infos.deezerId = s.id;
                 deezerInfos = _.clone(s);
-        	}
+            }
         });
         if (infos.deezerId) {
             infos.artistName = deezerInfos.artist.name;
@@ -390,11 +390,11 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     }).then(function (body) {
         var itunesInfos;
         _.forEach(body.results, function (s) {
-			if (!infos.itunesId && (imatch(vsimpleName(title), vsimpleName(s.trackName)) || imatch(vsimpleName(title), vsimpleName(s.trackCensoredName))) && imatch(vsimpleName(artistName), vsimpleName(s.artistName))) {
-				infos.itunesId = s.trackId;
-				itunesInfos = _.clone(s);
-			}
-		});
+            if (!infos.itunesId && (imatch(vsimpleName(title), vsimpleName(s.trackName)) || imatch(vsimpleName(title), vsimpleName(s.trackCensoredName))) && imatch(vsimpleName(artistName), vsimpleName(s.artistName))) {
+                infos.itunesId = s.trackId;
+                itunesInfos = _.clone(s);
+            }
+        });
         if (!infos.deezerId && itunesInfos) {
             infos.artistName = itunesInfos.artistName;
             if (imatch(vsimpleName(infos.title), vsimpleName(itunesInfos.trackName))) {
@@ -427,10 +427,10 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
 };
 
 /**
- * Add tags to MP3 file
- * @param file
- * @param infos
- */
+* Add tags to MP3 file
+* @param file
+* @param infos
+*/
 at3.tagFile = function (file, infos) {
     var meta = {
         title: infos.title,
@@ -482,11 +482,11 @@ at3.tagFile = function (file, infos) {
 };
 
 /**
- * Download and convert a single URL,
- * retrieve and add tags to the MP3 file
- * @param url
- * @param v boolean Verbosity
- */
+* Download and convert a single URL,
+* retrieve and add tags to the MP3 file
+* @param url
+* @param v boolean Verbosity
+*/
 at3.downloadAndTagSingleURL = function (url, v) {
     if (v === undefined) {
         v = false;
@@ -592,21 +592,21 @@ at3.downloadAndTagSingleURL = function (url, v) {
 };
 
 /**
- * Try to find the best video matching a request
- * @param query string
- * @param v boolean Verbosity
- */
+* Try to find the best video matching a request
+* @param query string
+* @param v boolean Verbosity
+*/
 at3.findVideo = function(query, v) {
     if (v === undefined) {
         v = false;
     }
 
     /**
-     * Remove useless information in the title
-     * like (audio only), (lyrics)...
-     * @param title string
-     * @return string
-     */
+    * Remove useless information in the title
+    * like (audio only), (lyrics)...
+    * @param title string
+    * @return string
+    */
     function improveTitle(title) {
         var useless = [
             'audio only',
@@ -647,9 +647,9 @@ at3.findVideo = function(query, v) {
     }
 
     /**
-     * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
-     * in seconds
-     */
+    * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
+    * in seconds
+    */
     function parseTime(time) {
         time = time.replace('PT','');
         time = time.replace('S', '');
@@ -662,23 +662,23 @@ at3.findVideo = function(query, v) {
     }
 
     /**
-     * Modify strings to compare it more efficently
-     * example: Maître Gims = maitre gims
-     * @param text string
-     * @return string
-     */
+    * Modify strings to compare it more efficently
+    * example: Maître Gims = maitre gims
+    * @param text string
+    * @return string
+    */
     function easyCompare(text) {
         return _.deburr(_.toLower(text));
     }
 
     /**
-     * Returns the score of a video, comparing to the request
-     * @param q string The query
-     * @param video object
-     * @param largestRealLike
-     * @param largestViews
-     * @return Object
-     */
+    * Returns the score of a video, comparing to the request
+    * @param q string The query
+    * @param video object
+    * @param largestRealLike
+    * @param largestViews
+    * @return Object
+    */
     function score(q, video, largestRealLike, largestViews, guessSong) {
         // weight of each argument
         var weights = {
