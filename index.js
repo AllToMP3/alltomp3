@@ -10,6 +10,7 @@ const acoustid = require('acoustid');
 const EyeD3 = require('eyed3');
 const eyed3 = new EyeD3({ eyed3_executable: 'eyeD3' });
 const levenshtein = require('fast-levenshtein');
+const crypto = require('crypto');
 
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
@@ -451,23 +452,36 @@ at3.tagFile = function (file, infos) {
     if (infos.genre) {
         meta.genre = infos.genre.replace(/\/.+$/g, '');
     }
-    eyed3.updateMeta(file, meta, function (err) {
-        if (err) {
-            console.log(err);
+
+    var updateInfos = new Promise(function (resolve, reject) {
+        eyed3.updateMeta(file, meta, function (err) {
+            if (err) {
+                console.log(err);
+            }
+            resolve();
+        });
+    });
+
+    var updateCover = new Promise(function (resolve, reject) {
+        if (infos.cover) {
+            var coverPath = file + '.cover.jpg';
+
+            requestNoPromise(infos.cover, function () {
+                eyed3.updateMeta(file, {image: coverPath}, function (err) {
+                    if (err) {
+                        console.log("image error: ", err);
+                    }
+                    fs.unlinkSync(coverPath);
+
+                    resolve();
+                });
+            }).pipe(fs.createWriteStream(coverPath));
+        } else {
+            resolve();
         }
     });
 
-    if (infos.cover) {
-        var coverPath = file + '.cover.jpg';
-        requestNoPromise(infos.cover, function () {
-            eyed3.updateMeta(file, {image: coverPath}, function (err) {
-                if (err) {
-                    console.log("image error: ", err);
-                }
-                fs.unlink(coverPath);
-            });
-        }).pipe(fs.createWriteStream(coverPath));
-    }
+    return Promise.all([updateInfos, updateCover]);
 };
 
 /**
@@ -481,7 +495,7 @@ at3.downloadAndTagSingleURL = function (url, v) {
         v = false;
     }
 
-    var tempFile = 'test.mp3';
+    var tempFile = crypto.createHash('sha256').update(url).digest('hex') + '.mp3';
 
     // Download and convert file
     var dl = at3.downloadSingleURL(url, tempFile, '320k');
@@ -509,9 +523,7 @@ at3.downloadAndTagSingleURL = function (url, v) {
         if (guessStringInfos.title && guessStringInfos.artistName) {
             return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
         } else {
-            return new Promise(function (resolve, reject) {
-                resolve();
-            });
+            return Promise.resolve();
         }
     }).then(function (guessStringInfos) {
         // [TODO] Emit event with these infos
@@ -533,9 +545,7 @@ at3.downloadAndTagSingleURL = function (url, v) {
             if (guessFileInfos.title && guessFileInfos.artistName) {
                 return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
             } else {
-                return new Promise(function (resolve, reject) {
-                    resolve();
-                });
+                return Promise.resolve();
             }
         }).then(function (guessFileInfos) {
             if (guessFileInfos) {
@@ -577,8 +587,9 @@ at3.downloadAndTagSingleURL = function (url, v) {
                 console.log('Final infos: ', infos);
             }
 
-            // [TODO] Rename file
-            at3.tagFile(tempFile, infos);
+            at3.tagFile(tempFile, infos).then(function() {
+                fs.rename(tempFile, infos.artistName + ' - ' + infos.title + '.mp3');
+            });
         });
     });
 };
