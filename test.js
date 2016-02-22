@@ -38,7 +38,28 @@ const alltomp3 = require('.');
 
 // alltomp3.downloadAndTagSingleURL('https://www.youtube.com/watch?v=YykjpeuMNEk', true);
 
-var title = "overwerk day break";
+var title = "hide and seek imogen heap";
 alltomp3.findVideo(title).then(function(results) {
-    alltomp3.downloadAndTagSingleURL(results[0].url, true, title);
+    var dl = alltomp3.downloadAndTagSingleURL(results[0].url, function(infos) {
+        console.log("FINI ", infos);
+    }, title);
+    dl.on('download', function(infos) {
+        process.stdout.cursorTo(0);
+        process.stdout.clearLine(1);
+        process.stdout.write(infos.progress + '%');
+    });
+    dl.on('download-end', function() {
+        console.log('Download end');
+    });
+    dl.on('convert', function(infos) {
+        process.stdout.cursorTo(0);
+        process.stdout.clearLine(1);
+        process.stdout.write(infos.progress + '%');
+    });
+    dl.on('convert-end', function() {
+        console.log('Convert end');
+    });
+    dl.on('infos', function(infos) {
+        console.log('Got infos: ', infos);
+    });
 });

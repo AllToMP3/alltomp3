@@ -485,17 +485,33 @@ at3.tagFile = function (file, infos) {
 * Download and convert a single URL,
 * retrieve and add tags to the MP3 file
 * @param url
+* @param callback Callback function
+* @param title string Optional requested title
 * @param v boolean Verbosity
 */
-at3.downloadAndTagSingleURL = function (url, v, title) {
+at3.downloadAndTagSingleURL = function (url, callback, title, v) {
     if (v === undefined) {
         v = false;
     }
+    if (callback === undefined) {
+        callback = function() {};
+    }
+
+    const progressEmitter = new EventEmitter();
 
     var tempFile = crypto.createHash('sha256').update(url).digest('hex') + '.mp3';
 
     // Download and convert file
     var dl = at3.downloadSingleURL(url, tempFile, '320k');
+    dl.on('download', function(infos) {
+        progressEmitter.emit('download', infos);
+    });
+    dl.on('download-end', function() {
+        progressEmitter.emit('download-end');
+    });
+    dl.on('convert', function(infos) {
+        progressEmitter.emit('convert', infos, infos);
+    });
 
     var infosFromString, infosFromFile;
 
@@ -515,7 +531,7 @@ at3.downloadAndTagSingleURL = function (url, v, title) {
             console.log("Video infos: ", infosFromString);
         }
 
-        // [TODO] Emit event with these infos
+        progressEmitter.emit('infos', _.clone(infosFromString));
 
         return at3.guessTrackFromString(videoInfos.title, false, false, v);
     }).then(function (guessStringInfos) {
@@ -525,9 +541,9 @@ at3.downloadAndTagSingleURL = function (url, v, title) {
             return Promise.resolve();
         }
     }).then(function (guessStringInfos) {
-        // [TODO] Emit event with these infos
         if (guessStringInfos) {
             infosFromString = guessStringInfos;
+            progressEmitter.emit('infos', _.clone(infosFromString));
             if (v) {
                 console.log("guessStringInfos: ", guessStringInfos);
             }
@@ -540,6 +556,7 @@ at3.downloadAndTagSingleURL = function (url, v, title) {
 
     // Try to find information based on MP3 file when dl is finished
     dl.once('end', function() {
+        progressEmitter.emit('convert-end');
         var getFileInfos = at3.guessTrackFromFile(tempFile).then(function (guessFileInfos) {
             if (guessFileInfos.title && guessFileInfos.artistName) {
                 return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
@@ -582,15 +599,26 @@ at3.downloadAndTagSingleURL = function (url, v, title) {
                 }
             }
 
+            progressEmitter.emit('infos', _.clone(infos));
+
             if (v) {
                 console.log('Final infos: ', infos);
             }
 
             at3.tagFile(tempFile, infos).then(function() {
-                fs.rename(tempFile, infos.artistName + ' - ' + infos.title + '.mp3');
+                var finalFile = infos.artistName + ' - ' + infos.title + '.mp3';
+                fs.renameSync(tempFile, finalFile);
+                var finalInfos = {
+                    infos: infos,
+                    file: finalFile
+                };
+                progressEmitter.emit('end', finalInfos);
+                callback(finalInfos);
             });
         });
     });
+
+    return progressEmitter;
 };
 
 /**
