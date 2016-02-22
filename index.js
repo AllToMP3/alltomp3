@@ -835,6 +835,46 @@ at3.findVideo = function(query, v) {
     });
 };
 
+/**
+* Find a song from a query, then download the corresponding video,
+* convert and tag it
+* @param query string
+* @param callback Callback function
+* @param v boolean Verbosity
+*/
+at3.findAndDownload = function(query, callback, v) {
+    if (v === undefined) {
+        v = false;
+    }
+    const progressEmitter = new EventEmitter();
+
+    at3.findVideo(query).then(function(results) {
+        if (results.length === 0) {
+            progressEmitter.emit('error');
+            return callback(null, "Cannot find any video corresponding");
+        }
+        progressEmitter.emit('search-end');
+        var dl = at3.downloadAndTagSingleURL(results[0].url, callback, query);
+        dl.on('download', function(infos) {
+            progressEmitter.emit('download', infos);
+        });
+        dl.on('download-end', function() {
+            progressEmitter.emit('download-end');
+        });
+        dl.on('convert', function(infos) {
+            progressEmitter.emit('convert', infos);
+        });
+        dl.on('convert-end', function() {
+            progressEmitter.emit('convert-end');
+        });
+        dl.on('infos', function(infos) {
+            progressEmitter.emit('infos', infos);
+        });
+    });
+
+    return progressEmitter;
+};
+
 function imatch(textSearched, text) {
     // [TODO] Improve this function (use .test and espace special caracters + use it everywhere else)
     return text.match(new RegExp(textSearched, 'gi'));
