@@ -485,21 +485,25 @@ at3.tagFile = function (file, infos) {
 * Download and convert a single URL,
 * retrieve and add tags to the MP3 file
 * @param url
+* @param outputFolder
 * @param callback Callback function
 * @param title string Optional requested title
 * @param v boolean Verbosity
 */
-at3.downloadAndTagSingleURL = function (url, callback, title, v) {
+at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
     if (v === undefined) {
         v = false;
     }
     if (callback === undefined) {
         callback = function() {};
     }
+    if (outputFolder.charAt(outputFolder.length-1) != '/') {
+        outputFolder += '/';
+    }
 
     const progressEmitter = new EventEmitter();
 
-    var tempFile = crypto.createHash('sha256').update(url).digest('hex') + '.mp3';
+    var tempFile = outputFolder + crypto.createHash('sha256').update(url).digest('hex') + '.mp3';
 
     // Download and convert file
     var dl = at3.downloadSingleURL(url, tempFile, '320k');
@@ -606,7 +610,7 @@ at3.downloadAndTagSingleURL = function (url, callback, title, v) {
             }
 
             at3.tagFile(tempFile, infos).then(function() {
-                var finalFile = infos.artistName + ' - ' + infos.title + '.mp3';
+                var finalFile = outputFolder + infos.artistName + ' - ' + infos.title + '.mp3';
                 fs.renameSync(tempFile, finalFile);
                 var finalInfos = {
                     infos: infos,
@@ -839,10 +843,11 @@ at3.findVideo = function(query, v) {
 * Find a song from a query, then download the corresponding video,
 * convert and tag it
 * @param query string
+* @param outputFolder
 * @param callback Callback function
 * @param v boolean Verbosity
 */
-at3.findAndDownload = function(query, callback, v) {
+at3.findAndDownload = function(query, outputFolder, callback, v) {
     if (v === undefined) {
         v = false;
     }
@@ -854,7 +859,7 @@ at3.findAndDownload = function(query, callback, v) {
             return callback(null, "Cannot find any video corresponding");
         }
         progressEmitter.emit('search-end');
-        var dl = at3.downloadAndTagSingleURL(results[0].url, callback, query);
+        var dl = at3.downloadAndTagSingleURL(results[0].url, outputFolder, callback, query);
         dl.on('download', function(infos) {
             progressEmitter.emit('download', infos);
         });
