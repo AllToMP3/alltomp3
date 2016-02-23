@@ -289,7 +289,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 at3.guessTrackFromFile = function (file) {
     return new Promise(function (resolve, reject) {
         acoustid(file, { key: API_ACOUSTID }, function (err, results) {
-            if (err || results.length === 0) {
+            if (err || results.length === 0 || !results[0].recordings || results[0].recordings.length === 0 || !results[0].recordings[0].artists || results[0].recordings[0].artists.length === 0) {
                 resolve({});
                 return;
             }
