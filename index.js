@@ -20,9 +20,20 @@ const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 var at3 = {};
 
 /**
+* Returns true if the query corresponds
+* to an URL, else false
+* @param query string
+* @return boolean
+*/
+at3.isURL = function(query) {
+    return /^http(s?):\/\//.test(query);
+};
+
+/**
 * Download a single video with youtube-dl
 * @param url
 * @param outputFile
+* @return Event
 */
 at3.downloadWithYoutubeDl = function(url, outputFile) {
     var download = youtubedl(url, ['-f', 'bestaudio']);
@@ -65,6 +76,7 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
 * @param inputFile
 * @param outputFile
 * @param bitrate string
+* @return Event
 */
 at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
     const convertEmitter = new EventEmitter();
@@ -92,6 +104,7 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
 /**
 * Get infos about an online video with youtube-dl
 * @param url
+* @return Promise
 */
 at3.getInfosWithYoutubeDl = function(url) {
     return new Promise(function (resolve, reject) {
@@ -110,6 +123,7 @@ at3.getInfosWithYoutubeDl = function(url) {
 * @param url
 * @param outputFile
 * @param bitrate
+* @return Event
 */
 at3.downloadSingleURL = function(url, outputFile, bitrate) {
     const progressEmitter = new EventEmitter();
@@ -151,6 +165,7 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
 * @param exact boolean Can the query be modified or not
 * @param last boolean Last call
 * @param v boolean Verbose
+* @return Promise
 */
 at3.guessTrackFromString = function(query, exact, last, v) {
     if (exact === undefined) {
@@ -285,6 +300,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 /**
 * Try to guess title and artist from mp3 file
 * @param file
+* @return Promise
 */
 at3.guessTrackFromFile = function (file) {
     return new Promise(function (resolve, reject) {
@@ -308,6 +324,7 @@ at3.guessTrackFromFile = function (file) {
 * @param artistName
 * @param exact boolean Exact search or not
 * @param v boolean Verbose
+* @return Promise
 */
 at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     if (exact === undefined) {
@@ -430,6 +447,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
 * Add tags to MP3 file
 * @param file
 * @param infos
+* @return Promise
 */
 at3.tagFile = function (file, infos) {
     var meta = {
@@ -489,6 +507,7 @@ at3.tagFile = function (file, infos) {
 * @param callback Callback function
 * @param title string Optional requested title
 * @param v boolean Verbosity
+* @return Event
 */
 at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
     if (v === undefined) {
@@ -629,6 +648,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
 * Try to find the best video matching a request
 * @param query string
 * @param v boolean Verbosity
+* @return Promise
 */
 at3.findVideo = function(query, v) {
     if (v === undefined) {
@@ -846,6 +866,7 @@ at3.findVideo = function(query, v) {
 * @param outputFolder
 * @param callback Callback function
 * @param v boolean Verbosity
+* @return Event
 */
 at3.findAndDownload = function(query, outputFolder, callback, v) {
     if (v === undefined) {
