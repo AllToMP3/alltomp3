@@ -593,6 +593,9 @@ at3.tagFile = function (file, infos) {
     if (infos.discNumber) {
         meta.disc = infos.discNumber;
     }
+    if (infos.lyrics) {
+        meta.lyrics = infos.lyrics;
+    }
     if (infos.releaseDate) {
         meta.year = (/[0-9]{4}/.exec(infos.releaseDate))[0];
     }
@@ -755,9 +758,18 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
                 console.log('Final infos: ', infos);
             }
 
-            at3.tagFile(tempFile, infos).then(function() {
+            at3.findLyrics(infos.title, infos.artistName).then(function(lyrics) {
+                return fs.writeFile(tempFile + '.lyrics', lyrics);
+            }).then(function() {
+                infos.lyrics = tempFile + '.lyrics';
+            }).catch(function() {
+                // no lyrics
+            }).finally(function() {
+                return at3.tagFile(tempFile, infos);
+            }).then(function() {
                 var finalFile = outputFolder + infos.artistName + ' - ' + infos.title + '.mp3';
                 fs.renameSync(tempFile, finalFile);
+                fs.unlink(tempFile + '.lyrics');
                 var finalInfos = {
                     infos: infos,
                     file: finalFile
