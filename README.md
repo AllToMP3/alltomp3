@@ -211,3 +211,19 @@ alltomp3.guessTrackFromString('hans zimmer no time for caution').then(l);
 // { title: 'Hey Mama', artistName: 'David Guetta' }
 // { title: 'No Time for Caution', artistName: 'Hans Zimmer' }
 ```
+
+
+### findLyrics(title, artistName)
+Search lyrics for a song.
+
+Returns a **Promise** with a `string`.
+
+```js
+const alltomp3 = require('alltomp3');
+
+alltomp3.findLyrics('Radioactive', 'Imagine Dragons').then(function (lyrics) {
+    console.log(lyrics);
+}).catch(function() {
+    console.log('No lyrics');
+});
+```

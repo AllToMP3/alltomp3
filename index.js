@@ -11,6 +11,8 @@ const EyeD3 = require('eyed3');
 const eyed3 = new EyeD3({ eyed3_executable: 'eyeD3' });
 const levenshtein = require('fast-levenshtein');
 const crypto = require('crypto');
+const cheerio = require('cheerio');
+const Promise = require('bluebird');
 
 // API keys
 const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
@@ -18,6 +20,131 @@ const API_ACOUSTID = 'lm59lNN597';
 const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 
 var at3 = {};
+
+/**
+* Find lyrics for a song
+* @param title string
+* @param artistName string
+* @return Promise
+*/
+at3.findLyrics = function(title, artistName) {
+    var promises = [];
+
+    function textln(html) {
+        html.find('br').replaceWith('\n');
+        html.find('script').replaceWith('');
+        html.find('#video-musictory').replaceWith('');
+        html.find('strong').replaceWith('');
+        html = _.trim(html.text());
+        html = html.replace(/\r\n\n/g, '\n');
+        html = html.replace(/\t/g, '');
+        html = html.replace(/\n\r\n/g, '\n');
+        html = html.replace(/ +/g, ' ');
+        html = html.replace(/\n /g, '\n');
+        return html;
+    }
+
+    function lyricsUrl(title) {
+    	return _.kebabCase(_.trim(_.toLower(_.deburr(title))));
+    }
+    function lyricsManiaUrl(title) {
+    	return _.snakeCase(_.trim(_.toLower(_.deburr(title))));
+    }
+
+    var reqWikia = request({
+        uri: 'http://lyrics.wikia.com/wiki/' + encodeURIComponent(artistName) + ':' + encodeURIComponent(title),
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }).then(function($) {
+        return textln($('.lyricbox'));
+    });
+
+    var reqParolesNet = request({
+        uri: 'http://www.paroles.net/' + lyricsUrl(artistName) + '/paroles-' + lyricsUrl(title),
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }).then(function($) {
+        if ($('.song-text').length === 0) {
+            return Promise.reject();
+        }
+        return textln($('.song-text'));
+    });
+
+    var reqLyricsMania1 = request({
+        uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_lyrics_' + lyricsManiaUrl(artistName) + '.html',
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }).then(function($) {
+        if ($('.lyrics-body').length === 0) {
+            return Promise.reject();
+        }
+        return textln($('.lyrics-body'));
+    });
+
+    var reqLyricsMania2 = request({
+        uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_' + lyricsManiaUrl(artistName) + '.html',
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }).then(function($) {
+        console.log('alors');
+        if ($('.lyrics-body').length === 0) {
+            return Promise.reject();
+        }
+        console.log('oh');
+        return textln($('.lyrics-body'));
+    });
+
+    var reqSweetLyrics = request({
+        method: 'POST',
+        uri: 'http://www.sweetslyrics.com/search.php',
+        form: {
+            search: 'title',
+            searchtext: title
+        },
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }).then(function($) {
+        var closestLink, closestScore = -1;
+        _.forEach($('.search_results_row_color'), function (e) {
+            var artist = $(e).text().replace(/ - .+$/, '');
+            var currentScore = levenshtein.get(artistName, artist);
+            if (closestScore == -1 || currentScore < closestScore) {
+                closestScore = currentScore;
+                closestLink = $(e).find('a').last().attr('href');
+            }
+        });
+        if (!closestLink) {
+            return Promise.reject();
+        }
+        return request({
+            uri: 'http://www.sweetslyrics.com/' + closestLink,
+            transform: function (body) {
+                return cheerio.load(body);
+            }
+        });
+    }).then(function($) {
+        return textln($('.lyric_full_text'));
+    });
+
+    if (/\(.*\)/.test(title) || /\[.*\]/.test(title)) {
+        promises.push(at3.findLyrics(title.replace(/\(.*\)/g, '').replace(/\[.*\]/g, ''), artistName));
+    }
+
+    promises.push(reqWikia);
+    promises.push(reqParolesNet);
+    promises.push(reqLyricsMania1);
+    promises.push(reqLyricsMania2);
+    promises.push(reqSweetLyrics);
+
+    return Promise.any(promises).then(function(lyrics) {
+        return lyrics;
+    });
+};
 
 /**
 * Returns true if the query corresponds
