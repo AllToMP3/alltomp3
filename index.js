@@ -1061,6 +1061,7 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
 */
 at3.getURLsInPlaylist = function(url) {
     var type = at3.guessURLType(url);
+
     if (type == 'youtube') {
         var playlistId = url.match(/list=([0-9a-zA-Z_-]+)/);
         playlistId = playlistId[1];
@@ -1176,6 +1177,84 @@ at3.getTracksInPlaylist = function(url) {
             });
         }
     }
+};
+
+/**
+* Download a playlist containing URLs
+* @param url
+* @param outputFolder
+* @param callback
+* @param maxSimultaneous Maximum number of simultaneous track processing
+* @return Event
+*/
+at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultaneous) {
+    if (maxSimultaneous === undefined) {
+        maxSimultaneous = 1;
+    }
+
+    const emitter = new EventEmitter();
+    var running = 0;
+    var lastIndex = 0;
+
+    at3.getURLsInPlaylist(url).then(function (urls) {
+        emitter.emit('list', urls);
+
+        downloadNext(urls, 0);
+    });
+
+    function downloadNext(urls, currentIndex) {
+        if (urls.length == currentIndex) {
+            emitter.emit('end');
+            callback(urls);
+            return;
+        }
+        running++;
+        if (currentIndex > lastIndex) {
+            lastIndex = currentIndex;
+        }
+
+        var currentUrl = urls[currentIndex];
+
+        currentUrl.progress = {};
+
+        emitter.emit('begin-url', currentIndex);
+
+        var dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, function(infos) {
+            currentUrl.file = infos.file;
+            currentUrl.infos = infos.infos;
+            running--;
+
+            emitter.emit('end-url', currentIndex);
+
+            if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex+1);
+            }
+        });
+
+        dl.on('download', function(infos) {
+            currentUrl.progress.download = infos;
+            emitter.emit('download', currentIndex);
+        });
+        dl.on('download-end', function() {
+            emitter.emit('download-end', currentIndex);
+            if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex+1);
+            }
+        });
+        dl.on('convert', function(infos) {
+            currentUrl.progress.convert = infos;
+            emitter.emit('convert', currentIndex);
+        });
+        dl.on('convert-end', function() {
+            emitter.emit('convert-end', currentIndex);
+        });
+        dl.on('infos', function(infos) {
+            currentUrl.infos = infos;
+            emitter.emit('infos', currentIndex);
+        });
+    }
+
+    return emitter;
 };
 
 /**
