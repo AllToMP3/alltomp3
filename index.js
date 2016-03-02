@@ -1204,8 +1204,10 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
 
     function downloadNext(urls, currentIndex) {
         if (urls.length == currentIndex) {
-            emitter.emit('end');
-            callback(urls);
+            if (running === 0) {
+                emitter.emit('end');
+                callback(urls);
+            }
             return;
         }
         running++;
