@@ -196,6 +196,10 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
         downloadEmitter.emit('download-end');
     });
 
+    download.on('error', function() {
+        downloadEmitter.emit('error', new Error());
+    });
+
     return downloadEmitter;
 };
 
@@ -237,11 +241,15 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
 at3.getInfosWithYoutubeDl = function(url) {
     return new Promise(function (resolve, reject) {
         youtubedl.getInfo(url, function (err, infos) {
-            resolve({
-                title: infos.title,
-                author: infos.uploader,
-                picture: infos.thumbnail
-            });
+            if (err || infos === undefined) {
+                reject();
+            } else {
+                resolve({
+                    title: infos.title,
+                    author: infos.uploader,
+                    picture: infos.thumbnail
+                });
+            }
         });
     });
 };
@@ -281,6 +289,10 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
         convert.on('convert-end', function() {
             progressEmitter.emit('end');
         });
+    });
+
+    dl.on('error', function() {
+        progressEmitter.emit('error', new Error());
     });
 
     return progressEmitter;
@@ -679,6 +691,9 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
     dl.on('convert', function(infos) {
         progressEmitter.emit('convert', infos, infos);
     });
+    dl.on('error', function() {
+        progressEmitter.emit('error', new Error());
+    });
 
     var infosFromString, infosFromFile;
 
@@ -719,6 +734,8 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
                 console.log('Cannot retrieve detailed information from video title');
             }
         }
+    }).catch(function() {
+        // The download must have failed to, and emit an erro
     });
 
     // Try to find information based on MP3 file when dl is finished
@@ -783,7 +800,9 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
             }).then(function() {
                 var finalFile = outputFolder + infos.artistName + ' - ' + infos.title + '.mp3';
                 fs.renameSync(tempFile, finalFile);
-                fs.unlink(tempFile + '.lyrics');
+                if (infos.lyrics) {
+                    fs.unlink(tempFile + '.lyrics');
+                }
                 var finalInfos = {
                     infos: infos,
                     file: finalFile
@@ -1049,6 +1068,9 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
         dl.on('infos', function(infos) {
             progressEmitter.emit('infos', infos);
         });
+        dl.on('error', function() {
+            progressEmitter.emit('error', new Error());
+        });
     });
 
     return progressEmitter;
@@ -1253,6 +1275,101 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
         dl.on('infos', function(infos) {
             currentUrl.infos = infos;
             emitter.emit('infos', currentIndex);
+        });
+        dl.on('error', function() {
+            emitter.emit('error', new Error(currentIndex));
+            if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex+1);
+            }
+        });
+    }
+
+    return emitter;
+};
+
+/**
+* Download a playlist containing titles
+* @param url
+* @param outputFolder
+* @param callback
+* @param maxSimultaneous Maximum number of simultaneous track processing
+* @return Event
+*/
+at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimultaneous) {
+    if (maxSimultaneous === undefined) {
+        maxSimultaneous = 1;
+    }
+
+    const emitter = new EventEmitter();
+    var running = 0;
+    var lastIndex = 0;
+
+    at3.getTracksInPlaylist(url).then(function (urls) {
+        emitter.emit('list', urls);
+
+        downloadNext(urls, 0);
+    });
+
+    function downloadNext(urls, currentIndex) {
+        if (urls.length == currentIndex) {
+            if (running === 0) {
+                emitter.emit('end');
+                callback(urls);
+            }
+            return;
+        }
+        running++;
+        if (currentIndex > lastIndex) {
+            lastIndex = currentIndex;
+        }
+
+        var currentTrack = urls[currentIndex];
+
+        currentTrack.progress = {};
+
+        emitter.emit('begin-url', currentIndex);
+
+        var dl = at3.findAndDownload(currentTrack.url, outputFolder, function(infos) {
+            currentTrack.file = infos.file;
+            currentTrack.infos = infos.infos;
+            running--;
+
+            emitter.emit('end-url', currentIndex);
+
+            if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex+1);
+            }
+        });
+
+        dl.on('search-end', function() {
+            emitter.emit('search-end', currentIndex);
+        });
+        dl.on('download', function(infos) {
+            currentTrack.progress.download = infos;
+            emitter.emit('download', currentIndex);
+        });
+        dl.on('download-end', function() {
+            emitter.emit('download-end', currentIndex);
+            if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex+1);
+            }
+        });
+        dl.on('convert', function(infos) {
+            currentTrack.progress.convert = infos;
+            emitter.emit('convert', currentIndex);
+        });
+        dl.on('convert-end', function() {
+            emitter.emit('convert-end', currentIndex);
+        });
+        dl.on('infos', function(infos) {
+            currentTrack.infos = infos;
+            emitter.emit('infos', currentIndex);
+        });
+        dl.on('error', function() {
+            emitter.emit('error', new Error(currentIndex));
+            if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex+1);
+            }
         });
     }
 

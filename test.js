@@ -66,31 +66,31 @@ const alltomp3 = require('.');
 //     });
 // });
 
-var dl = alltomp3.findAndDownload("imagine dragons on top of the world", "./mp3/", function (infos) {
-    console.log("It's finished: ", infos);
-});
-dl.on('search-end', function() {
-    console.log('Search end');
-});
-dl.on('download', function(infos) {
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(1);
-    process.stdout.write(infos.progress + '%');
-});
-dl.on('download-end', function() {
-    console.log('', 'Download end');
-});
-dl.on('convert', function(infos) {
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(1);
-    process.stdout.write(infos.progress + '%');
-});
-dl.on('convert-end', function() {
-    console.log('', 'Convert end');
-});
-dl.on('infos', function(infos) {
-    console.log('New infos received: ', infos);
-});
+// var dl = alltomp3.findAndDownload("imagine dragons on top of the world", "./mp3/", function (infos) {
+//     console.log("It's finished: ", infos);
+// });
+// dl.on('search-end', function() {
+//     console.log('Search end');
+// });
+// dl.on('download', function(infos) {
+//     process.stdout.cursorTo(0);
+//     process.stdout.clearLine(1);
+//     process.stdout.write(infos.progress + '%');
+// });
+// dl.on('download-end', function() {
+//     console.log('', 'Download end');
+// });
+// dl.on('convert', function(infos) {
+//     process.stdout.cursorTo(0);
+//     process.stdout.clearLine(1);
+//     process.stdout.write(infos.progress + '%');
+// });
+// dl.on('convert-end', function() {
+//     console.log('', 'Convert end');
+// });
+// dl.on('infos', function(infos) {
+//     console.log('New infos received: ', infos);
+// });
 
 // alltomp3.guessTrackFromString('Imagine Dragons - On Top of the World - Lyrics').then(function(infos) {
 //     console.log(infos);
@@ -118,6 +118,46 @@ dl.on('infos', function(infos) {
 //     console.log(items);
 // });
 
-alltomp3.getTracksInPlaylist('http://www.deezer.com/album/11111444').then(function(items) {
-    console.log(items);
+// alltomp3.getTracksInPlaylist('http://www.deezer.com/album/11111444').then(function(items) {
+//     console.log(items);
+// });
+
+var urls;
+var dl = alltomp3.downloadPlaylistWithURLs("https://www.youtube.com/watch?v=zriAamH8zmw&index=4&list=PLcpfarJLJAJ_aAahG3AB5e8X5nJ7cOPH6", "./mp3/", function (urls) {
+    console.log("It's finished: ", urls);
+}, 8);
+dl.on('search-end', function() {
+    console.log('Search end');
+});
+dl.on('download', function(index) {
+    process.stdout.cursorTo(0);
+    process.stdout.clearLine(1);
+    process.stdout.write(urls[index].progress.download.progress + '%');
+});
+dl.on('download-end', function() {
+    console.log('', 'Download end');
+});
+dl.on('convert', function(index) {
+    process.stdout.cursorTo(0);
+    process.stdout.clearLine(1);
+    process.stdout.write(urls[index].progress.convert.progress + '%');
+});
+dl.on('convert-end', function(index) {
+    console.log('', 'Convert end');
+});
+dl.on('error', function(index) {
+    console.log('', 'Error with ' + index);
+});
+dl.on('infos', function(index) {
+    // console.log('New infos received: ', infos);
+});
+dl.on('list', function(urlss) {
+    urls = urlss;
+    console.log('URLs received: ', urlss);
+});
+dl.on('begin-url', function(index) {
+    console.log('Begin: ', index);
+});
+dl.on('end-url', function(index) {
+    console.log('End: ', index);
 });
