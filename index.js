@@ -53,6 +53,7 @@ at3.findLyrics = function(title, artistName) {
     }
     function lyricsManiaUrlAlt(title) {
         title = _.trim(_.toLower(title));
+        title = title.replace("'", '');
         title = title.replace(' ', '_');
         title = title.replace(/_+/g, '_');
         return title;
@@ -104,7 +105,7 @@ at3.findLyrics = function(title, artistName) {
     });
 
     var reqLyricsMania3 = request({
-        uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_lyrics_' + encodeURIComponent(lyricsManiaUrlAlt(artistName)) + '.html',
+        uri: 'http://www.lyricsmania.com/' + lyricsManiaUrlAlt(title) + '_lyrics_' + encodeURIComponent(lyricsManiaUrlAlt(artistName)) + '.html',
         transform: function (body) {
             return cheerio.load(body);
         }
