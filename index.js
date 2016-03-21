@@ -51,6 +51,12 @@ at3.findLyrics = function(title, artistName) {
     function lyricsManiaUrl(title) {
     	return _.snakeCase(_.trim(_.toLower(_.deburr(title))));
     }
+    function lyricsManiaUrlAlt(title) {
+        title = _.trim(_.toLower(title));
+        title = title.replace(' ', '_');
+        title = title.replace(/_+/g, '_');
+        return title;
+    }
 
     var reqWikia = request({
         uri: 'http://lyrics.wikia.com/wiki/' + encodeURIComponent(artistName) + ':' + encodeURIComponent(title),
@@ -91,11 +97,22 @@ at3.findLyrics = function(title, artistName) {
             return cheerio.load(body);
         }
     }).then(function($) {
-        console.log('alors');
         if ($('.lyrics-body').length === 0) {
             return Promise.reject();
         }
-        console.log('oh');
+        return textln($('.lyrics-body'));
+    });
+
+    var reqLyricsMania3 = request({
+        uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_lyrics_' + encodeURIComponent(lyricsManiaUrlAlt(artistName)) + '.html',
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }).then(function($) {
+        if ($('.lyrics-body').length === 0) {
+            return Promise.reject();
+        }
+
         return textln($('.lyrics-body'));
     });
 
@@ -140,6 +157,7 @@ at3.findLyrics = function(title, artistName) {
     promises.push(reqParolesNet);
     promises.push(reqLyricsMania1);
     promises.push(reqLyricsMania2);
+    promises.push(reqLyricsMania3);
     promises.push(reqSweetLyrics);
 
     return Promise.any(promises).then(function(lyrics) {
