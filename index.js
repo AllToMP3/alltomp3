@@ -1094,10 +1094,11 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
     at3.findVideo(query).then(function(results) {
         if (results.length === 0) {
             progressEmitter.emit('error');
-            return callback(null, "Cannot find any video corresponding");
+            return callback(null, "Cannot find any video matching");
         }
+        var i = 0;
         progressEmitter.emit('search-end');
-        var dl = at3.downloadAndTagSingleURL(results[0].url, outputFolder, callback, query);
+        var dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
         dl.on('download', function(infos) {
             progressEmitter.emit('download', infos);
         });
@@ -1114,7 +1115,11 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
             progressEmitter.emit('infos', infos);
         });
         dl.on('error', function() {
-            progressEmitter.emit('error', new Error());
+            if (i < results.length) {
+                dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
+            } else {
+                progressEmitter.emit('error', new Error());
+            }
         });
     });
 
