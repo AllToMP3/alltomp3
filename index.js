@@ -836,12 +836,12 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
 };
 
 /**
-* Try to find the best video matching a request
+* Search a query on YouTube and return the detailed results
 * @param query string
 * @param v boolean Verbosity
 * @return Promise
 */
-at3.findVideo = function(query, v) {
+at3.searchOnYoutube = function(query, v) {
     if (v === undefined) {
         v = false;
     }
@@ -906,6 +906,68 @@ at3.findVideo = function(query, v) {
         }
     }
 
+    var results = [];
+
+    // We simply search on YouTube
+    return request({
+        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&maxResults=7&q=' + encodeURIComponent(query),
+        json: true
+    }).then(function (body) {
+        if (!body.items || body.items.length === 0) {
+            return reject();
+        }
+
+        var requests = [];
+
+        _.forEach(body.items, function (s) {
+            if (!s.id.videoId) {
+                return;
+            }
+
+            var req = request({
+                url: 'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' + API_GOOGLE + '&id=' + s.id.videoId,
+                json: true
+            }).then(function (video) {
+                video = video.items[0];
+                var ratio = 1.0;
+                if (video.statistics.dislikeCount > 0) {
+                    ratio = video.statistics.likeCount / video.statistics.dislikeCount;
+                }
+                if (ratio === 0) {
+                    ratio = 1;
+                }
+                var realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
+
+                results.push({
+                    id: video.id,
+                    url: 'https://www.youtube.com/watch?v=' + video.id,
+                    title: improveTitle(video.snippet.title),
+                    hd: (video.contentDetails.definition == 'hd'),
+                    duration: parseTime(video.contentDetails.duration),
+                    views: video.statistics.viewCount,
+                    realLike: realLike
+                });
+            });
+
+            requests.push(req);
+        });
+        return Promise.all(requests);
+    }).then(function() {
+        return results;
+    });
+};
+
+/**
+* @param query string The query
+* @param song Object Searched song
+* @param videos Array List of videos
+* @param v boolean Verbosity
+*/
+at3.findBestVideo = function(query, song, videos, v) {
+    if (v === undefined) {
+        v = false;
+    }
+    
     /**
     * Modify strings to compare it more efficently
     * example: Maître Gims = maitre gims
@@ -963,90 +1025,54 @@ at3.findVideo = function(query, v) {
         return preVideoScore;
     }
 
-    return new Promise(function (resolve, reject) {
+    var largestRealLike = _.reduce(videos, function (v, r) {
+        if (r.realLike > v) {
+            return r.realLike;
+        }
+        return v;
+    }, 0);
+    var largestViews = _.reduce(videos, function (v, r) {
+        if (r.views > v) {
+            return r.views;
+        }
+        return v;
+    }, 0);
 
-        // We try to find the exact song
-        // (usefull to compare the duration for example)
-        var guessSong = {};
-        var guessSongRequest = at3.guessTrackFromString(query, false, false, v).then(function (guessStringInfos) {
-            if (guessStringInfos.title && guessStringInfos.artistName) {
-                return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
-            } else {
-                return Promise.resolve({});
-            }
-        }).then(function(guessStringInfos) {
-            guessSong = guessStringInfos;
-        });
+    _.forEach(videos, function(r) {
+        r.score = score(query, r, largestRealLike, largestViews, song);
+    });
 
-        var results = [];
+    return _.reverse(_.sortBy(videos, 'score'));
+};
+/**
+* Try to find the best video matching a request
+* @param query string
+* @param v boolean Verbosity
+* @return Promise
+*/
+at3.findVideo = function(query, v) {
+    if (v === undefined) {
+        v = false;
+    }
 
-        // We simply search on YouTube
-        var requestYouTubeSearch = request({
-            url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&maxResults=7&q=' + encodeURIComponent(query),
-            json: true
-        }).then(function (body) {
-            if (!body.items || body.items.length === 0) {
-                return reject();
-            }
+    // We try to find the exact song
+    // (usefull to compare the duration for example)
+    var guessSongRequest = at3.guessTrackFromString(query, false, false, v).then(function (guessStringInfos) {
+        if (guessStringInfos.title && guessStringInfos.artistName) {
+            return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
+        } else {
+            return Promise.resolve({});
+        }
+    });
 
-            var requests = [guessSongRequest];
+    // We simply search on YouTube
+    var youtubeSearchRequest = at3.searchOnYoutube(query, v);
 
-            _.forEach(body.items, function (s) {
-                if (!s.id.videoId) {
-                    return;
-                }
+    return Promise.all([guessSongRequest, youtubeSearchRequest]).then(function (results) {
+        var songResult = results[0];
+        var youtubeResults = results[1];
 
-                var req = request({
-                    url: 'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' + API_GOOGLE + '&id=' + s.id.videoId,
-                    json: true
-                }).then(function (video) {
-                    video = video.items[0];
-                    var ratio = 1.0;
-                    if (video.statistics.dislikeCount > 0) {
-                        ratio = video.statistics.likeCount / video.statistics.dislikeCount;
-                    }
-                    if (ratio === 0) {
-                        ratio = 1;
-                    }
-                    var realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
-
-                    results.push({
-                        id: video.id,
-                        url: 'https://www.youtube.com/watch?v=' + video.id,
-                        title: improveTitle(video.snippet.title),
-                        hd: (video.contentDetails.definition == 'hd'),
-                        duration: parseTime(video.contentDetails.duration),
-                        views: video.statistics.viewCount,
-                        realLike: realLike
-                    });
-                });
-
-                requests.push(req);
-            });
-
-            return Promise.all(requests);
-        }).then(function () {
-
-            var largestRealLike = _.reduce(results, function (v, r) {
-                if (r.realLike > v) {
-                    return r.realLike;
-                }
-                return v;
-            }, 0);
-            var largestViews = _.reduce(results, function (v, r) {
-                if (r.views > v) {
-                    return r.views;
-                }
-                return v;
-            }, 0);
-
-            _.forEach(results, function(r) {
-                r.score = score(query, r, largestRealLike, largestViews, guessSong);
-            });
-
-            resolve(_.reverse(_.sortBy(results, 'score')));
-        });
-
+        return at3.findBestVideo(query, songResult, youtubeResults, v);
     });
 };
 
