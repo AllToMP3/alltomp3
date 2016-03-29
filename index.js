@@ -675,6 +675,82 @@ at3.tagFile = function (file, infos) {
 };
 
 /**
+* Search and return complete information about a single video url
+* @param url
+* @param v boolean Verbosity
+* @return Promise(object)
+*/
+at3.getCompleteInfosFromURL = function(url, v) {
+    var infosFromString;
+    // Try to find information based on video title
+    return at3.getInfosWithYoutubeDl(url).then(function(videoInfos) {
+        infosFromString = {
+            title: videoInfos.title,
+            artistName: videoInfos.author,
+            cover: videoInfos.picture, // [TODO] Create square image
+            originalTitle: videoInfos.title
+        };
+
+        if (v) {
+            console.log("Video infos: ", infosFromString);
+        }
+
+        // progressEmitter.emit('infos', _.clone(infosFromString));
+
+        return at3.guessTrackFromString(videoInfos.title, false, false, v);
+    }).then(function (guessStringInfos) {
+        if (guessStringInfos.title && guessStringInfos.artistName) {
+            return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
+        } else {
+            return Promise.resolve();
+        }
+    }).then(function (guessStringInfos) {
+        if (guessStringInfos) {
+            infosFromString = guessStringInfos;
+            // progressEmitter.emit('infos', _.clone(infosFromString));
+            if (v) {
+                console.log("guessStringInfos: ", guessStringInfos);
+            }
+        } else {
+            if (v) {
+                console.log('Cannot retrieve detailed information from video title');
+            }
+        }
+
+        return infosFromString;
+    }).catch(function(error) {
+        // The download must have failed to, and emit an error
+    });
+};
+
+/**
+* Identify the song from a file and then search complete information about it
+* @param file string
+* @param v boolean Verbosity
+* @return Promise(object)
+*/
+at3.getCompleteInfosFromFile = function(file, v) {
+    return at3.guessTrackFromFile(file).then(function (guessFileInfos) {
+        if (guessFileInfos.title && guessFileInfos.artistName) {
+            return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
+        } else {
+            return Promise.resolve();
+        }
+    }).then(function (guessFileInfos) {
+        if (guessFileInfos) {
+            if (v) {
+                console.log("guessFileInfos: ", guessFileInfos);
+            }
+            return guessFileInfos;
+        } else {
+            if (v) {
+                console.log('Cannot retrieve detailed information from MP3 file');
+            }
+        }
+    });
+};
+
+/**
 * Download and convert a single URL,
 * retrieve and add tags to the MP3 file
 * @param url
@@ -717,70 +793,26 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
     var infosFromString, infosFromFile;
 
     // Try to find information based on video title
-    var getStringInfos = at3.getInfosWithYoutubeDl(url).then(function(videoInfos) {
-        infosFromString = {
-            title: videoInfos.title,
-            artistName: videoInfos.author,
-            cover: videoInfos.picture // [TODO] Create square image
-        };
-
+    var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
         if (title === undefined) {
-            title = videoInfos.title;
+            title = inf.originalTitle;
         }
-
-        if (v) {
-            console.log("Video infos: ", infosFromString);
-        }
-
-        progressEmitter.emit('infos', _.clone(infosFromString));
-
-        return at3.guessTrackFromString(videoInfos.title, false, false, v);
-    }).then(function (guessStringInfos) {
-        if (guessStringInfos.title && guessStringInfos.artistName) {
-            return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
-        } else {
-            return Promise.resolve();
-        }
-    }).then(function (guessStringInfos) {
-        if (guessStringInfos) {
-            infosFromString = guessStringInfos;
-            progressEmitter.emit('infos', _.clone(infosFromString));
-            if (v) {
-                console.log("guessStringInfos: ", guessStringInfos);
-            }
-        } else {
-            if (v) {
-                console.log('Cannot retrieve detailed information from video title');
-            }
-        }
+        infosFromString = inf;
     }).catch(function() {
-        // The download must have failed to, and emit an erro
+        // The download must have failed to, and emit an error
     });
 
     // Try to find information based on MP3 file when dl is finished
     dl.once('end', function() {
         progressEmitter.emit('convert-end');
-        var getFileInfos = at3.guessTrackFromFile(tempFile).then(function (guessFileInfos) {
-            if (guessFileInfos.title && guessFileInfos.artistName) {
-                return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
-            } else {
-                return Promise.resolve();
-            }
-        }).then(function (guessFileInfos) {
-            if (guessFileInfos) {
-                infosFromFile = guessFileInfos;
-                if (v) {
-                    console.log("guessFileInfos: ", guessFileInfos);
-                }
-            } else {
-                if (v) {
-                    console.log('Cannot retrieve detailed information from MP3 file');
-                }
-            }
+
+        var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
+            infosFromFile = inf;
         });
 
         // [TODO] Improve network issue resistance
         Promise.all([getStringInfos, getFileInfos]).then(function() {
+            // ça on peut garder
             var infos = infosFromString;
             if (infosFromFile) {
                 var scoreFromFile = Math.min(
@@ -967,7 +999,7 @@ at3.findBestVideo = function(query, song, videos, v) {
     if (v === undefined) {
         v = false;
     }
-    
+
     /**
     * Modify strings to compare it more efficently
     * example: Maître Gims = maitre gims
@@ -1241,7 +1273,8 @@ at3.getTracksInPlaylist = function(url) {
                         artistName: track.artist.name,
                         deezerId: track.id,
                         album: albumInfos.album,
-                        cover: albumInfos.cover
+                        cover: albumInfos.cover,
+                        duration: track.duration
                     });
                 });
 
