@@ -266,3 +266,45 @@ This event is emitted when the processing of an item is finished, with an intege
 
 ##### 'end': everything is finished
 This event is emitted at the end, when all items have been processed, with the `list` array.
+
+
+### downloadPlaylistWithTitles(url, outputFolder, callback, maxSimultaneous)
+Download the playlist `url` containing titles (aka Deezer Playlist or Deezer Album), find best matching video on YouTube, convert and tag it in `outputFolder`. `maxSimultaneous` is the maximum number of parallel conversions (default to 1).
+
+#### Emit
+#### 'list': the playlist description has been received
+This event is emitted when information about the playlist has been received, with an `array(objects)` with the following keys:
+- `title`: title of the track
+- `artistName`: artist of the track
+- `cover`: cover of the track
+- `progress`: object with:
+  - `download`: progression of the download
+  - `convert`: progression of the conversion
+- `infos`: `trackInfos` object
+- `file`: path to the final MP3
+
+**This array is updated as the process progress.**
+
+#### 'begin-url': a new item is processed
+This event is emitted when a new item is now processed, with an integer `index` indicating the corresponding track.
+
+### 'search-end': the search end
+This event is emitted when the search of YouTube videos for an item (based on the title) end, with an integer `index` indicating the corresponding track.
+
+##### 'download': the download of an item is in progress
+This event is emitted during the download, with an integer `index` indicating the corresponding track.
+
+##### 'download-end': the download end
+This event is emitted when the download of an item end, with an integer `index` indicating the corresponding track.
+
+##### 'convert': the conversion is in progress
+This event is emitted during the conversion, with an integer `index` indicating the corresponding track.
+
+##### 'infos': infos about the track
+This event is emitted every time new information about a track is received, with an integer `index` indicating the corresponding track.
+
+#### 'end-url': the processing of an item is finished
+This event is emitted when the processing of an item is finished, with an integer `index` indicating the corresponding track.
+
+##### 'end': everything is finished
+This event is emitted at the end, when all items have been processed, with the `list` array.
