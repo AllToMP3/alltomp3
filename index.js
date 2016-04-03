@@ -758,10 +758,11 @@ at3.getCompleteInfosFromFile = function(file, v) {
 * @param outputFolder
 * @param callback Callback function
 * @param title string Optional requested title
+* @param infos object Basic infos to tag the file
 * @param v boolean Verbosity
 * @return Event
 */
-at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
+at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, infos) {
     if (v === undefined) {
         v = false;
     }
@@ -791,28 +792,47 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
         progressEmitter.emit('error', new Error());
     });
 
-    var infosFromString, infosFromFile;
+    var infosFromString, infosFromFile, infosRequests = [];
 
-    // Try to find information based on video title
-    var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
-        if (title === undefined) {
-            title = inf.originalTitle;
-        }
-        infosFromString = inf;
-    }).catch(function() {
-        // The download must have failed to, and emit an error
-    });
+    if (infos.deezerId) {
+        // If deezer track id is provided, with fetch more information
+        var getMoreInfos = at3.getDeezerTrackInfos(infos.deezerId, v).then(function (inf) {
+            infosFromString = inf;
+        });
+
+        infosRequests.push(getMoreInfos);
+    }
+
+    if (!infos.deezerId) {
+        // Try to find information based on video title
+        var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
+            // Faudrait emit
+            if (title === undefined) {
+                title = inf.originalTitle;
+            }
+            infosFromString = inf;
+        }).catch(function() {
+            // The download must have failed to, and emit an error
+        });
+
+        infosRequests.push(getStringInfos);
+    }
 
     // Try to find information based on MP3 file when dl is finished
     dl.once('end', function() {
         progressEmitter.emit('convert-end');
 
-        var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
-            infosFromFile = inf;
-        });
+        if (!infos.deezerId) {
+            var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
+                // Faudrait emit là aussi
+                infosFromFile = inf;
+            });
+
+            infosRequests.push(getFileInfos);
+        }
 
         // [TODO] Improve network issue resistance
-        Promise.all([getStringInfos, getFileInfos]).then(function() {
+        Promise.all(infosRequests).then(function() {
             // ça on peut garder
             var infos = infosFromString;
             if (infosFromFile) {
@@ -850,7 +870,14 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v) {
             }).finally(function() {
                 return at3.tagFile(tempFile, infos);
             }).then(function() {
-                var finalFile = outputFolder + infos.artistName + ' - ' + infos.title + '.mp3';
+                var finalFile = outputFolder;
+                if (infos.position) {
+                    if (infos.position < 10) {
+                        finalFile += '0';
+                    }
+                    finalFile += infos.position + ' ';
+                }
+                finalFile += infos.artistName + ' - ' + infos.title + '.mp3';
                 fs.renameSync(tempFile, finalFile);
                 if (infos.lyrics) {
                     fs.unlink(tempFile + '.lyrics');
@@ -1413,47 +1440,60 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
 
         emitter.emit('begin-url', currentIndex);
 
-        var dl = at3.findAndDownload(currentTrack.url, outputFolder, function(infos) {
-            currentTrack.file = infos.file;
-            currentTrack.infos = infos.infos;
-            running--;
-
-            emitter.emit('end-url', currentIndex);
-
-            if (running < maxSimultaneous) {
-                downloadNext(urls, lastIndex+1);
-            }
-        });
-
-        dl.on('search-end', function() {
+        var query = currentTrack.title + ' - ' + currentTrack.artistName;
+        var youtubeRequest = at3.searchOnYoutube(query);
+        youtubeRequest.then(function(videos) {
+            return at3.findBestVideo(query, currentTrack, videos);
+        }).then(function (videos) {
             emitter.emit('search-end', currentIndex);
-        });
-        dl.on('download', function(infos) {
-            currentTrack.progress.download = infos;
-            emitter.emit('download', currentIndex);
-        });
-        dl.on('download-end', function() {
-            emitter.emit('download-end', currentIndex);
-            if (running < maxSimultaneous) {
-                downloadNext(urls, lastIndex+1);
+
+            function downloadFinished(infos) {
+                currentTrack.file = infos.file;
+                currentTrack.infos = infos.infos;
+                running--;
+
+                emitter.emit('end-url', currentIndex);
+
+                if (running < maxSimultaneous) {
+                    downloadNext(urls, lastIndex+1);
+                }
             }
-        });
-        dl.on('convert', function(infos) {
-            currentTrack.progress.convert = infos;
-            emitter.emit('convert', currentIndex);
-        });
-        dl.on('convert-end', function() {
-            emitter.emit('convert-end', currentIndex);
-        });
-        dl.on('infos', function(infos) {
-            currentTrack.infos = infos;
-            emitter.emit('infos', currentIndex);
-        });
-        dl.on('error', function() {
-            emitter.emit('error', new Error(currentIndex));
-            if (running < maxSimultaneous) {
-                downloadNext(urls, lastIndex+1);
-            }
+
+            var i = 0;
+            var dl = at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack);
+
+            dl.on('download', function(infos) {
+                currentTrack.progress.download = infos;
+                emitter.emit('download', currentIndex);
+            });
+            dl.on('download-end', function() {
+                emitter.emit('download-end', currentIndex);
+                if (running < maxSimultaneous) {
+                    downloadNext(urls, lastIndex+1);
+                }
+            });
+            dl.on('convert', function(infos) {
+                currentTrack.progress.convert = infos;
+                emitter.emit('convert', currentIndex);
+            });
+            dl.on('convert-end', function() {
+                emitter.emit('convert-end', currentIndex);
+            });
+            dl.on('infos', function(infos) {
+                currentTrack.infos = infos;
+                emitter.emit('infos', currentIndex);
+            });
+            dl.on('error', function() {
+                if (i < videos.length) {
+                    i++;
+                    dl = at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack);
+                } else {
+                    emitter.emit('error', new Error(currentIndex));
+                    if (running < maxSimultaneous) {
+                        downloadNext(urls, lastIndex+1);
+                    }
+                }
+            });
         });
     }
 
