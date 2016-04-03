@@ -706,6 +706,7 @@ at3.getCompleteInfosFromURL = function(url, v) {
         }
     }).then(function (guessStringInfos) {
         if (guessStringInfos) {
+            guessStringInfos.originalTitle = infosFromString.originalTitle;
             infosFromString = guessStringInfos;
             // progressEmitter.emit('infos', _.clone(infosFromString));
             if (v) {
