@@ -794,7 +794,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
 
     var infosFromString, infosFromFile, infosRequests = [];
 
-    if (infos.deezerId) {
+    if (infos && infos.deezerId) {
         // If deezer track id is provided, with fetch more information
         var getMoreInfos = at3.getDeezerTrackInfos(infos.deezerId, v).then(function (inf) {
             infosFromString = inf;
@@ -803,7 +803,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
         infosRequests.push(getMoreInfos);
     }
 
-    if (!infos.deezerId) {
+    if (!infos || !infos.deezerId) {
         // Try to find information based on video title
         var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
             // Faudrait emit
@@ -822,7 +822,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     dl.once('end', function() {
         progressEmitter.emit('convert-end');
 
-        if (!infos.deezerId) {
+        if (!infos || !infos.deezerId) {
             var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
                 // Faudrait emit là aussi
                 infosFromFile = inf;
@@ -1498,6 +1498,56 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
     }
 
     return emitter;
+};
+
+/**
+* Download a playlist containing urls or titles
+* @param url
+* @param outputFolder
+* @param callback
+* @param maxSimultaneous Maximum number of simultaneous track processing
+* @return Event
+*/
+at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous) {
+    var type = at3.guessURLType(url);
+    var sitesTitles = ['deezer'];
+    var sitesURLs = ['youtube', 'soundcloud'];
+
+    if (sitesTitles.indexOf(type) >= 0) {
+        return at3.downloadPlaylistWithTitles(url, outputFolder, callback, maxSimultaneous);
+    } else if (sitesURLs.indexOf(type) >= 0) {
+        return at3.downloadPlaylistWithURLs(url, outputFolder, callback, maxSimultaneous);
+    } else {
+        return (new EventEmitter()).emit('error', new Error('Website not supported yet'));
+    }
+};
+
+/**
+* Return the type of the query
+* @param query string
+* @return string: text, single-url, playlist-url, not-supported
+*/
+at3.typeOfQuery = function(query) {
+    if (!at3.isURL(query)) {
+        return 'text';
+    }
+    var type = at3.guessURLType(query);
+    if (!type) {
+        return 'not-supported';
+    }
+
+    if (type == 'youtube' && /list=([0-9a-zA-Z_-]+)/.test(query)) {
+        return 'playlist-url';
+    } else if (type == 'deezer') {
+        if (/\/(playlist|album)\//.test(query)) {
+            return 'playlist-url';
+        }
+        return 'not-supported';
+    } else if (type == 'soundcloud' && /\/sets\//.test(query)) {
+        return 'playlist-url';
+    }
+
+    return 'single-url';
 };
 
 /**
