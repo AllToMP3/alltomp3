@@ -1153,7 +1153,7 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
 
     at3.findVideo(query).then(function(results) {
         if (results.length === 0) {
-            progressEmitter.emit('error');
+            progressEmitter.emit('error', new Error("Cannot find any video matching"));
             return callback(null, "Cannot find any video matching");
         }
         var i = 0;
@@ -1181,6 +1181,9 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
                 progressEmitter.emit('error', new Error());
             }
         });
+    }).catch(function() {
+        progressEmitter.emit('error', new Error("Cannot find any video matching"));
+        return callback(null, "Cannot find any video matching");
     });
 
     return progressEmitter;
