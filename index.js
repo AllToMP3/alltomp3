@@ -974,7 +974,7 @@ at3.searchOnYoutube = function(query, v) {
         json: true
     }).then(function (body) {
         if (!body.items || body.items.length === 0) {
-            return reject();
+            return Promise.reject();
         }
 
         var requests = [];
