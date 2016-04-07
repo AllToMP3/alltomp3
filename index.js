@@ -789,6 +789,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
         progressEmitter.emit('convert', infos, infos);
     });
     dl.on('error', function() {
+        callback(null, 'error');
         progressEmitter.emit('error', new Error());
     });
 
@@ -1207,6 +1208,10 @@ at3.getURLsInPlaylist = function(url) {
             var playlistItems = [];
 
             _.forEach(playlistDetails.items, function (item) {
+                if (!item.snippet || !item.snippet.thumbnails) {
+                    // Video unavailable, like cbixLt0WBQs
+                    return;
+                }
                 var highestUrl;
                 _.forEach(['maxres', 'standart', 'high', 'medium', 'default'], function (res) {
                     if (!highestUrl && item.snippet.thumbnails[res]) {
@@ -1357,9 +1362,11 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
 
         emitter.emit('begin-url', currentIndex);
 
-        var dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, function(infos) {
-            currentUrl.file = infos.file;
-            currentUrl.infos = infos.infos;
+        var dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, function(infos, error) {
+            if (infos) {
+                currentUrl.file = infos.file;
+                currentUrl.infos = infos.infos;
+            }
             running--;
 
             emitter.emit('end-url', currentIndex);
@@ -1521,6 +1528,7 @@ at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous) {
     } else if (sitesURLs.indexOf(type) >= 0) {
         return at3.downloadPlaylistWithURLs(url, outputFolder, callback, maxSimultaneous);
     } else {
+        callback(null, 'Website not supported yet');
         return (new EventEmitter()).emit('error', new Error('Website not supported yet'));
     }
 };
