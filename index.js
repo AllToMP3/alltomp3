@@ -521,6 +521,8 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
 
             return at3.getDeezerTrackInfos(infos.deezerId, v).then(function (deezerInfos) {
                 infos = deezerInfos;
+            }).catch(function () {
+
             });
         }
     });
@@ -582,6 +584,10 @@ at3.getDeezerTrackInfos = function(trackId, v) {
         url: 'http://api.deezer.com/2.0/track/' + infos.deezerId,
         json: true
     }).then(function (trackInfos) {
+        if (trackInfos.error) {
+            return Promise.reject();
+        }
+
         infos.title = trackInfos.title;
         infos.artistName = trackInfos.artist.name;
         infos.position = trackInfos.track_position;
@@ -799,6 +805,11 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
         // If deezer track id is provided, with fetch more information
         var getMoreInfos = at3.getDeezerTrackInfos(infos.deezerId, v).then(function (inf) {
             infosFromString = inf;
+        }).catch(function () {
+            infosFromString = {
+                title: infos.title,
+                artistName: infos.artistName
+            }
         });
 
         infosRequests.push(getMoreInfos);
