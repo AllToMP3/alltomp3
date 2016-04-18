@@ -31,6 +31,7 @@
   "dependencies": {
     "acoustid": "^1.2.1",
     "bluebird": "^3.3.3",
+    "chai": "^3.5.0",
     "cheerio": "^0.20.0",
     "eyed3": "git+https://github.com/AllToMP3/node-eyed3",
     "fast-levenshtein": "^1.1.3",
