@@ -15,7 +15,6 @@ const cheerio = require('cheerio');
 const Promise = require('bluebird');
 
 // API keys
-const API_ECHONEST_KEY = 'BPDC3NESDOHXKDIBZ';
 const API_ACOUSTID = 'lm59lNN597';
 const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 const API_SOUNDCLOUD = 'dba290d84e6ca924414c91ac12fc3c8f';
@@ -216,7 +215,7 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
     });
 
     download.on('error', function() {
-        downloadEmitter.emit('error', new Error());
+        downloadEmitter.emit('error', new Error(error));
     });
 
     return downloadEmitter;
@@ -354,34 +353,8 @@ at3.guessTrackFromString = function(query, exact, last, v) {
         artistName: null,
     };
 
-    // We search on Echonest, Deezer and iTunes
-    // Echonest
-    var requestEchonest = request({
-        url: 'http://developer.echonest.com/api/v4/song/search?api_key=' + API_ECHONEST_KEY + '&format=json&results=10&bucket=id:7digital-US&bucket=audio_summary&bucket=tracks&combined=' + encodeURIComponent(searchq),
-        json: true
-    }).then(function (body) {
-        var title, artistName, tempTitle;
-        _.forEach(body.response.songs, function (s) {
-            if (!title) {
-                if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artist_name), 'ig'))) {
-                    if (delArtist(s.artist_name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig'))) {
-                        artistName = s.artist_name;
-                        title = s.title;
-                    } else if (!artistName) {
-                        artistName = s.artist_name;
-                        tempTitle = s.title;
-                    }
-                }
-            }
-        });
-        if (title && artistName) {
-            infos.title = title;
-            infos.artistName = artistName;
-        }
-        if (v) {
-            console.log("Echonest answer: ", title, '-', artistName);
-        }
-    });
+    // We search on Deezer and iTunes
+    // [TODO] Adding Spotify
 
     // Deezer
     var requestDeezer = request({
@@ -442,7 +415,6 @@ at3.guessTrackFromString = function(query, exact, last, v) {
         }
     });
 
-    requests.push(requestEchonest);
     requests.push(requestDeezer);
     requests.push(requestiTunes);
 
