@@ -4,7 +4,7 @@
   "description": "Download and convert in MP3 with tags online videos",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -37,6 +37,7 @@
     "fast-levenshtein": "^1.1.3",
     "fluent-ffmpeg": "^2.0.1",
     "lodash": "^4.5.0",
+    "request": "^2.72.0",
     "request-promise": "^2.0.1",
     "youtube-dl": "^1.10.5"
   }
