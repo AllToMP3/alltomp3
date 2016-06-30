@@ -1,4 +1,4 @@
-# alltomp3
+# alltomp3 [![CircleCI Status](https://circleci.com/gh/AllToMP3/alltomp3.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/AllToMP3/alltomp3)
 Node module to download and convert in MP3 with tags an online video.
 
 Provide several useful methods to get information about a song or to guess the track matching a YouTube video.
