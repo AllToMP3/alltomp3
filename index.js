@@ -214,7 +214,7 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
         downloadEmitter.emit('download-end');
     });
 
-    download.on('error', function() {
+    download.on('error', function(error) {
         downloadEmitter.emit('error', new Error(error));
     });
 
@@ -309,8 +309,8 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
         });
     });
 
-    dl.on('error', function() {
-        progressEmitter.emit('error', new Error());
+    dl.on('error', function(error) {
+        progressEmitter.emit('error', new Error(error));
     });
 
     return progressEmitter;
@@ -766,9 +766,9 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     dl.on('convert', function(infos) {
         progressEmitter.emit('convert', infos, infos);
     });
-    dl.on('error', function() {
+    dl.on('error', function(error) {
         callback(null, 'error');
-        progressEmitter.emit('error', new Error());
+        progressEmitter.emit('error', new Error(error));
     });
 
     var infosFromString, infosFromFile, infosRequests = [];
@@ -1158,11 +1158,11 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
         dl.on('infos', function(infos) {
             progressEmitter.emit('infos', infos);
         });
-        dl.on('error', function() {
+        dl.on('error', function(error) {
             if (i < results.length) {
                 dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
             } else {
-                progressEmitter.emit('error', new Error());
+                progressEmitter.emit('error', new Error(error));
             }
         });
     }).catch(function() {
