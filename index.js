@@ -980,7 +980,7 @@ at3.searchOnYoutube = function(query, v) {
         time = time.replace('S', '');
         if (/M/.test(time)) {
             time = time.split('M');
-            return (parseInt(time[0])*60 + parseInt(time[1]));
+            return (parseInt(time[0])*60 + (parseInt(time[1]) || 0));
         } else {
             return parseInt(time[0]);
         }
@@ -1024,7 +1024,7 @@ at3.searchOnYoutube = function(query, v) {
                     title: improveTitle(video.snippet.title),
                     hd: (video.contentDetails.definition == 'hd'),
                     duration: parseTime(video.contentDetails.duration),
-                    views: video.statistics.viewCount,
+                    views: parseInt(video.statistics.viewCount),
                     realLike: realLike
                 });
             });
@@ -1069,11 +1069,11 @@ at3.findBestVideo = function(query, song, videos, v) {
     function score(q, video, largestRealLike, largestViews, guessSong) {
         // weight of each argument
         var weights = {
-            title: 20,
+            title: 30,
             hd: 0.3,
             duration: 14,
             views: 10,
-            realLike: 100
+            realLike: 15
         };
 
         var duration = guessSong.duration || video.duration;
@@ -1083,7 +1083,7 @@ at3.findBestVideo = function(query, song, videos, v) {
         // Score for title
         var title = _.toLower(video.title);
         var stitle;
-        if (title.split(' - ').length == 1) {
+        if (title.split(' - ').length == 2) {
             var expTitle = title.split(' - ');
             var title2 = expTitle[1] + ' - ' + expTitle[0];
             sTitle = Math.min(levenshtein.get(easyQ, easyCompare(title)), levenshtein.get(easyQ, easyCompare(title2)));
@@ -1096,8 +1096,9 @@ at3.findBestVideo = function(query, song, videos, v) {
             hd: video.hd*weights.hd,
             duration: Math.abs(video.duration - duration)*weights.duration,
             views: (video.views/largestViews)*weights.views,
-            realLike: (video.realLike/largestRealLike)*weights.realLike
+            realLike: (video.realLike/largestRealLike)*weights.realLike || -50 // video.realLike is NaN when the likes has been deactivated, which is a very bad sign
         };
+        video.videoScore = videoScore;
 
         var preVideoScore = videoScore.views + videoScore.realLike - videoScore.title - videoScore.duration;
         preVideoScore = preVideoScore + Math.abs(preVideoScore)*videoScore.hd;
