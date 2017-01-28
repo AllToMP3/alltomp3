@@ -39,6 +39,7 @@
     "lodash": "^4.5.0",
     "request": "^2.72.0",
     "request-promise": "^2.0.1",
+    "smartcrop-sharp": "^1.0.5",
     "youtube-dl": "^1.10.5"
   }
 }

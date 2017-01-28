@@ -13,6 +13,8 @@ const levenshtein = require('fast-levenshtein');
 const crypto = require('crypto');
 const cheerio = require('cheerio');
 const Promise = require('bluebird');
+const sharp = require('sharp');
+const smartcrop = require('smartcrop-sharp');
 
 // API keys
 const API_ACOUSTID = 'lm59lNN597';
@@ -635,13 +637,31 @@ at3.tagFile = function (file, infos) {
                 var coverPath = file + '.cover.jpg';
 
                 requestNoPromise(infos.cover, function () {
-                    eyed3.updateMeta(file, {image: coverPath}, function (err) {
-                        if (err) {
-                            console.log("image error: ", err);
-                        }
-                        fs.unlinkSync(coverPath);
 
-                        resolve();
+                    // Check that the cover is a square
+                    const coverFile = sharp(coverPath);
+                    coverFile.metadata().then(metadata => {
+                        if (metadata.width != metadata.height) {
+                            // In that case we will crop the cover to get a square
+                            const tempCoverPath = file + '.cover.resized.jpg';
+                            return smartcrop.crop(coverPath, {width: 100, height: 100}).then(function(result) {
+                              var crop = result.topCrop;
+                              return coverFile
+                                .extract({width: crop.width, height: crop.height, left: crop.x, top: crop.y})
+                                .toFile(tempCoverPath);
+                            }).then(() => {
+                                fs.renameSync(tempCoverPath, coverPath);
+                            });
+                        }
+                    }).then(() => {
+                        eyed3.updateMeta(file, {image: coverPath}, function (err) {
+                            if (err) {
+                                console.log("image error: ", err);
+                            }
+                            fs.unlinkSync(coverPath);
+
+                            resolve();
+                        });
                     });
                 }).pipe(fs.createWriteStream(coverPath));
             } else {
@@ -665,7 +685,7 @@ at3.getCompleteInfosFromURL = function(url, v) {
         infosFromString = {
             title: videoInfos.title,
             artistName: videoInfos.author,
-            cover: videoInfos.picture, // [TODO] Create square image
+            cover: videoInfos.picture.replace('hqdefault', 'mqdefault'), // [TODO]: getting a better resolution and removing the black borders
             originalTitle: videoInfos.title
         };
 
