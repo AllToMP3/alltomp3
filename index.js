@@ -730,6 +730,28 @@ at3.getCompleteInfosFromFile = function(file, v) {
 };
 
 /**
+* Return a correctly formatted filename for a song.
+* Example: "02 - On Top Of The World"
+* @param title string Title of the song
+* @param artist string Artist
+* @param position int Position on the disk
+* @return string
+*/
+at3.formatSongFilename = function (title, artist, position) {
+  let filename = "";
+  if (position) {
+    if (position < 10) {
+      filename += "0";
+    }
+    filename += position + " - ";
+  }
+
+  filename += _.startCase(_.toLower(_.deburr(title)));
+
+  return filename;
+};
+
+/**
 * Download and convert a single URL,
 * retrieve and add tags to the MP3 file
 * @param url
@@ -855,13 +877,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
                 return at3.tagFile(tempFile, infos);
             }).then(function() {
                 var finalFile = outputFolder;
-                if (infos.position) {
-                    if (infos.position < 10) {
-                        finalFile += '0';
-                    }
-                    finalFile += infos.position + ' ';
-                }
-                finalFile += infos.artistName + ' - ' + infos.title + '.mp3';
+                finalFile += at3.formatSongFilename(infos.title, infos.artistName, infos.position) + '.mp3';
                 fs.renameSync(tempFile, finalFile);
                 if (infos.lyrics) {
                     fs.unlink(tempFile + '.lyrics');
