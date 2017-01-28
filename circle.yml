@@ -5,3 +5,4 @@ machine:
 dependencies:
   pre:
     - sudo apt-get update; sudo apt-get install ffmpeg libchromaprint-tools eyeD3 lame
+    - npm install --global mocha
