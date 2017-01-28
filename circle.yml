@@ -1,3 +1,7 @@
+machine:
+  node:
+    version: 7.2.0
+
 dependencies:
   pre:
     - sudo apt-get update; sudo apt-get install ffmpeg libchromaprint-tools eyeD3 lame
