@@ -395,13 +395,13 @@ at3.guessTrackFromString = function(query, exact, last, v) {
         _.forEach(body.results, function (s) {
             if (!title) {
                 if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artistName), 'gi'))) {
-                    if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackName), 'gi'))) {
-                        artistName = s.artistName;
-                        title = s.trackName;
-                    } else if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
+                    if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
                         artistName = s.artistName;
                         title = s.trackCensoredName;
-                    } else if(!artistName) {
+                    } else if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackName), 'gi'))) {
+                        artistName = s.artistName;
+                        title = s.trackName;
+                    } else if (!artistName) {
                         artistName = s.artistName;
                         temp_title = s.trackName;
                     }
@@ -1138,9 +1138,9 @@ at3.findVideo = function(query, v) {
 
     // We try to find the exact song
     // (usefull to compare the duration for example)
-    var guessSongRequest = at3.guessTrackFromString(query, false, false, v).then(function (guessStringInfos) {
+    var guessSongRequest = at3.guessTrackFromString(query, true, false, v).then(function (guessStringInfos) {
         if (guessStringInfos.title && guessStringInfos.artistName) {
-            return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
+            return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, true, v);
         } else {
             return Promise.resolve({});
         }
