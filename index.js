@@ -15,6 +15,7 @@ const cheerio = require('cheerio');
 const Promise = require('bluebird');
 const sharp = require('sharp');
 const smartcrop = require('smartcrop-sharp');
+const lcs = require('longest-common-substring');
 
 // API keys
 const API_ACOUSTID = 'lm59lNN597';
@@ -1038,37 +1039,26 @@ at3.searchOnYoutube = function(query, v) {
 };
 
 /**
-* @param query string The query
 * @param song Object Searched song
 * @param videos Array List of videos
 * @param v boolean Verbosity
 */
-at3.findBestVideo = function(query, song, videos, v) {
+at3.findBestVideo = function(song, videos, v) {
     if (v === undefined) {
         v = false;
     }
 
     /**
-    * Modify strings to compare it more efficently
-    * example: Maître Gims = maitre gims
-    * @param text string
-    * @return string
-    */
-    function easyCompare(text) {
-        return _.deburr(_.toLower(text));
-    }
-
-    /**
     * Returns the score of a video, comparing to the request
-    * @param q string The query
+    * @param song Object Searched song
     * @param video object
     * @param largestRealLike
     * @param largestViews
     * @return Object
     */
-    function score(q, video, largestRealLike, largestViews, guessSong) {
+    function score(song, video, largestRealLike, largestViews) {
         // weight of each argument
-        var weights = {
+        let weights = {
             title: 30,
             hd: 0.3,
             duration: 14,
@@ -1076,22 +1066,33 @@ at3.findBestVideo = function(query, song, videos, v) {
             realLike: 15
         };
 
-        var duration = guessSong.duration || video.duration;
-
-        var easyQ = easyCompare(q);
+        let duration = song.duration || video.duration;
 
         // Score for title
-        var title = _.toLower(video.title);
-        var stitle;
-        if (title.split(' - ').length == 2) {
-            var expTitle = title.split(' - ');
-            var title2 = expTitle[1] + ' - ' + expTitle[0];
-            sTitle = Math.min(levenshtein.get(easyQ, easyCompare(title)), levenshtein.get(easyQ, easyCompare(title2)));
-        } else {
-            sTitle = levenshtein.get(easyQ, easyCompare(title));
+        let videoTitle = ' ' + _.lowerCase(video.title) + ' ';
+        let songTitle = ' ' + _.lowerCase(song.title) + ' '; // we add spaces to help longest-common-substring
+        let songArtist = ' ' + _.lowerCase(song.artistName) + ' '; // (example: the artist "M")
+
+        // for longest-common-substring, which works with arrays
+        let videoTitlea = videoTitle.split('');
+        let songTitlea = songTitle.split('');
+        let songArtista = songArtist.split('');
+
+        let videoSongTitle = lcs(videoTitlea, songTitlea);
+        if (videoSongTitle.length > 0 && videoSongTitle.startString2 === 0 && videoTitle[videoSongTitle.startString1 + videoSongTitle.length - 1] == ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
+            videoTitle = videoTitle.substring(0, videoSongTitle.startString1) + ' ' + videoTitle.substring(videoSongTitle.startString1 + videoSongTitle.length);
+            videoTitlea = videoTitle.split('');
+        }
+        let videoSongArtist = lcs(videoTitlea, songArtista);
+        if (videoSongArtist.length > 0 && videoSongArtist.startString2 === 0 && videoTitle[videoSongArtist.startString1 + videoSongArtist.length - 1] == ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
+            videoTitle = videoTitle.substring(0, videoSongArtist.startString1) + videoTitle.substring(videoSongArtist.startString1 + videoSongArtist.length);
         }
 
-        var videoScore = {
+
+        videoTitle = _.lowerCase(videoTitle);
+        let sTitle = videoTitle.length + (songTitle.length - videoSongTitle.length) + (songArtist.length - videoSongArtist.length);
+
+        let videoScore = {
             title: sTitle*weights.title,
             hd: video.hd*weights.hd,
             duration: Math.abs(video.duration - duration)*weights.duration,
@@ -1100,7 +1101,7 @@ at3.findBestVideo = function(query, song, videos, v) {
         };
         video.videoScore = videoScore;
 
-        var preVideoScore = videoScore.views + videoScore.realLike - videoScore.title - videoScore.duration;
+        let preVideoScore = videoScore.views + videoScore.realLike - videoScore.title - videoScore.duration;
         preVideoScore = preVideoScore + Math.abs(preVideoScore)*videoScore.hd;
 
         return preVideoScore;
@@ -1120,13 +1121,33 @@ at3.findBestVideo = function(query, song, videos, v) {
     }, 0);
 
     _.forEach(videos, function(r) {
-        r.score = score(query, r, largestRealLike, largestViews, song);
+        r.score = score(song, r, largestRealLike, largestViews);
     });
 
     return _.reverse(_.sortBy(videos, 'score'));
 };
+
+
 /**
-* Try to find the best video matching a request
+* Try to find the best video matching a song
+* @param song Object Searched song
+* @param v boolean Verbosity
+* @return Promise
+*/
+at3.findVideoForSong = function(song, v) {
+    if (v === undefined) {
+        v = false;
+    }
+
+    let query = song.title + ' - ' + song.artistName;
+    return at3.searchOnYoutube(query, v).then(youtubeResults => {
+        return at3.findBestVideo(song, youtubeResults, v);
+    });
+};
+
+// [TODO] we could also add a method that just take the first youtube video and downlaod it
+/**
+* Try to find the best video matching a song request
 * @param query string
 * @param v boolean Verbosity
 * @return Promise
@@ -1136,24 +1157,15 @@ at3.findVideo = function(query, v) {
         v = false;
     }
 
-    // We try to find the exact song
-    // (usefull to compare the duration for example)
-    var guessSongRequest = at3.guessTrackFromString(query, true, false, v).then(function (guessStringInfos) {
+    // We try to find the song
+    return at3.guessTrackFromString(query, true, false, v).then(guessStringInfos => {
         if (guessStringInfos.title && guessStringInfos.artistName) {
             return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, true, v);
         } else {
-            return Promise.resolve({});
+            return Promise.reject({error: "No song corresponds to your query"});
         }
-    });
-
-    // We simply search on YouTube
-    var youtubeSearchRequest = at3.searchOnYoutube(query, v);
-
-    return Promise.all([guessSongRequest, youtubeSearchRequest]).then(function (results) {
-        var songResult = results[0];
-        var youtubeResults = results[1];
-
-        return at3.findBestVideo(query, songResult, youtubeResults, v);
+    }).then(song => {
+        return at3.findVideoForSong(song, v);
     });
 };
 
@@ -1473,7 +1485,7 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
         var query = currentTrack.title + ' - ' + currentTrack.artistName;
         var youtubeRequest = at3.searchOnYoutube(query);
         youtubeRequest.then(function(videos) {
-            return at3.findBestVideo(query, currentTrack, videos);
+            return at3.findBestVideo(currentTrack, videos);
         }).then(function (videos) {
             emitter.emit('search-end', currentIndex);
 
