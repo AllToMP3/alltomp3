@@ -7,10 +7,10 @@ function testTracks(tracks, artistName) {
     _.forEach(tracks, t => {
         t.song.artistName = artistName;
         let q = alltomp3.findVideoForSong(t.song).then(v => {
+            if (t.videos.indexOf(v[0].url) === -1) {
+                console.log(t.title, v);
+            }
             expect(t.videos).to.include(v[0].url);
-            // if (t.videos.indexOf(v[0].url) === -1) {
-            //     console.log(t.title, v);
-            // }
         });
         queries.push(q);
     });
@@ -186,7 +186,7 @@ describe('findVideo', function() {
                     title: "Mama Sam",
                     duration: 195
                 },
-                videos: ['https://www.youtube.com/watch?v=oUv_9y0V-XQ', 'https://www.youtube.com/watch?v=avZTCTR6e9k', 'https://www.youtube.com/watch?v=HRez3YiXxJw']
+                videos: ['https://www.youtube.com/watch?v=avZTCTR6e9k', 'https://www.youtube.com/watch?v=HRez3YiXxJw']
             }
         ];
 
