@@ -1482,11 +1482,7 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
 
         emitter.emit('begin-url', currentIndex);
 
-        var query = currentTrack.title + ' - ' + currentTrack.artistName;
-        var youtubeRequest = at3.searchOnYoutube(query);
-        youtubeRequest.then(function(videos) {
-            return at3.findBestVideo(currentTrack, videos);
-        }).then(function (videos) {
+        at3.findVideoForSong(currentTrack).then(function (videos) {
             emitter.emit('search-end', currentIndex);
 
             function downloadFinished(infos) {
