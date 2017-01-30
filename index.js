@@ -24,6 +24,9 @@ const API_SOUNDCLOUD = 'dba290d84e6ca924414c91ac12fc3c8f';
 
 var at3 = {};
 
+// ISO 3166-1 alpha-2 country code of the user (ex: US, FR)
+at3.regionCode = 'US';
+
 /**
 * Find lyrics for a song
 * @param title string
@@ -919,12 +922,16 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
 /**
 * Search a query on YouTube and return the detailed results
 * @param query string
+* @param regionCode string ISO 3166-1 alpha-2 country code (ex: FR, US)
 * @param v boolean Verbosity
 * @return Promise
 */
-at3.searchOnYoutube = function(query, v) {
+at3.searchOnYoutube = function(query, regionCode, v) {
     if (v === undefined) {
         v = false;
+    }
+    if (regionCode === undefined) {
+        regionCode = 'US';
     }
 
     /**
@@ -991,7 +998,7 @@ at3.searchOnYoutube = function(query, v) {
 
     // We simply search on YouTube
     return request({
-        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&maxResults=15&q=' + encodeURIComponent(query),
+        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&regionCode=' + regionCode + '&maxResults=15&q=' + encodeURIComponent(query),
         json: true
     }).then(function (body) {
         if (!body.items || body.items.length === 0) {
@@ -1140,7 +1147,7 @@ at3.findVideoForSong = function(song, v) {
     }
 
     let query = song.title + ' - ' + song.artistName;
-    return at3.searchOnYoutube(query, v).then(youtubeResults => {
+    return at3.searchOnYoutube(query, at3.regionCode, v).then(youtubeResults => {
         return at3.findBestVideo(song, youtubeResults, v);
     });
 };

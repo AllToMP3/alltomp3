@@ -172,6 +172,9 @@ describe('findVideo', function() {
     it('should find YouTube videos for single letter artist M', function () {
         this.timeout(10000);
 
+        // It's a French song
+        alltomp3.regionCode = 'FR';
+
         let artistName = "M";
         let tracks = [
             {
