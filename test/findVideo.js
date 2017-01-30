@@ -162,7 +162,7 @@ describe('findVideo', function() {
                     "title": "Working Man",
                     "duration": 235
                 },
-                "videos": ['https://www.youtube.com/watch?v=m4SBGLtJvPo', 'https://www.youtube.com/watch?v=2d-GIw-pBMs', 'https://www.youtube.com/watch?v=NARf6QW3KYA', 'https://www.youtube.com/watch?v=31YTMhD4NYs']
+                "videos": ['https://www.youtube.com/watch?v=m4SBGLtJvPo', 'https://www.youtube.com/watch?v=2d-GIw-pBMs', 'https://www.youtube.com/watch?v=NARf6QW3KYA', 'https://www.youtube.com/watch?v=31YTMhD4NYs', 'https://www.youtube.com/watch?v=mhXoXYbmCz4', 'https://www.youtube.com/watch?v=2d-GIw-pBMs', 'https://www.youtube.com/watch?v=aW8_7M8e5CQ']
             }
         ];
 

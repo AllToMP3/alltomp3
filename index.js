@@ -991,7 +991,7 @@ at3.searchOnYoutube = function(query, v) {
 
     // We simply search on YouTube
     return request({
-        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&maxResults=7&q=' + encodeURIComponent(query),
+        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&maxResults=15&q=' + encodeURIComponent(query),
         json: true
     }).then(function (body) {
         if (!body.items || body.items.length === 0) {
