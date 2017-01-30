@@ -249,7 +249,7 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
         });
     })
     .on('end', function() {
-        fs.unlink(inputFile);
+        fs.unlinkSync(inputFile);
         convertEmitter.emit('convert-end');
     })
     .save(outputFile);
@@ -892,7 +892,15 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
             }
 
             at3.findLyrics(infos.title, infos.artistName).then(function(lyrics) {
-                return fs.writeFile(tempFile + '.lyrics', lyrics);
+                return new Promise((resolve, reject) => {
+                    fs.writeFile(tempFile + '.lyrics', lyrics, (error) => {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
             }).then(function() {
                 infos.lyrics = tempFile + '.lyrics';
             }).catch(function() {
@@ -904,7 +912,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
                 finalFile += at3.formatSongFilename(infos.title, infos.artistName, infos.position) + '.mp3';
                 fs.renameSync(tempFile, finalFile);
                 if (infos.lyrics) {
-                    fs.unlink(tempFile + '.lyrics');
+                    fs.unlinkSync(tempFile + '.lyrics');
                 }
                 var finalInfos = {
                     infos: infos,
