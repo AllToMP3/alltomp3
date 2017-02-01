@@ -1577,6 +1577,61 @@ at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous) {
 };
 
 /**
+* Return the suggested songs for the query
+* @param query string
+* @param limit number
+* @return Promise<array<trackInfos>> Array of potential songs
+*/
+at3.suggestedSongs = function(query, limit) {
+  if (!limit) {
+    limit = 5;
+  }
+
+  return request({
+    uri: 'http://api.deezer.com/search?limit=' + limit + '&q=' + query,
+    json: true
+  }).then(results => {
+    return _.map(results.data, r => {
+      return {
+        title: r.title,
+        artistName: r.artist.name,
+        duration: r.duration,
+        cover: r.album.cover_medium,
+        deezerId: r.id
+      };
+    });
+  });
+}
+
+/**
+* Return the suggested albums for the query
+* @param query string
+* @param limit number
+* @return Promise<array<Object>> Array of potential albums
+*/
+at3.suggestedAlbums = function(query, limit) {
+  if (!limit) {
+    limit = 5;
+  }
+
+  return request({
+    uri: 'http://api.deezer.com/search/album?limit=' + limit + '&q=' + query,
+    json: true
+  }).then(results => {
+    return _.map(results.data, r => {
+      return {
+        title: r.title,
+        artistName: r.artist.name,
+        cover: r.cover_medium,
+        deezerId: r.id,
+        link: r.link,
+        nbTracks: r.nb_tracks
+      };
+    });
+  });
+}
+
+/**
 * Return the type of the query
 * @param query string
 * @return string: text, single-url, playlist-url, not-supported
