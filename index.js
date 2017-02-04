@@ -770,7 +770,7 @@ at3.getCompleteInfosFromFile = function(file, v) {
 * @return string
 */
 at3.formatSongFilename = function (title, artist, position) {
-  let filename = "";
+  let filename = _.startCase(_.toLower(_.deburr(artist))) + ' - ';
   if (position) {
     if (position < 10) {
       filename += "0";
