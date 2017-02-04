@@ -188,7 +188,7 @@ at3.isURL = function(query) {
 * @return Event
 */
 at3.downloadWithYoutubeDl = function(url, outputFile) {
-    var download = youtubedl(url, ['-f', 'bestaudio']);
+    var download = youtubedl(url, ['-f', 'bestaudio/best']);
     const downloadEmitter = new EventEmitter();
 
     var size = 0;
@@ -332,6 +332,9 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
 * @return Promise
 */
 at3.guessTrackFromString = function(query, exact, last, v) {
+    // [TODO] Replace exact by a level of strictness
+    // 0: no change at all
+    // 4: remove every thing useless
     if (exact === undefined) {
         exact = false;
     }
@@ -351,6 +354,11 @@ at3.guessTrackFromString = function(query, exact, last, v) {
         searchq = searchq.replace(/\(.*\)/g, '');
         searchq = searchq.replace(/\[.*\]/g, '');
         searchq = searchq.replace(/lyric(s?)|parole(s?)/ig, '');
+        searchq = searchq.replace(/^'/, '');
+        searchq = searchq.replace(/ '/g, ' ');
+        searchq = searchq.replace(/' /g, ' ');
+        searchq = searchq.replace(/Original Motion Picture Soundtrack/i, '');
+        searchq = searchq.replace(/bande originale/i, '');
     }
 
     var requests = [];
@@ -371,7 +379,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
         _.forEach(body.data, function (s) {
             if (!title) {
                 if (vsimpleName(searchq,exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
-                    if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title), 'ig')) || vsimpleName(s.title).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
+                    if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title_short), 'ig')) || vsimpleName(s.title_short).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
                         artistName = s.artist.name;
                         title = s.title;
                     } else if(!artistName) {
@@ -836,11 +844,11 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     if (!infos || !infos.deezerId) {
         // Try to find information based on video title
         var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
-            // Faudrait emit
             if (title === undefined) {
                 title = inf.originalTitle;
             }
             infosFromString = inf;
+            progressEmitter.emit('infos', _.clone(infosFromString));
         }).catch(function() {
             // The download must have failed to, and emit an error
         });
@@ -854,8 +862,10 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
 
         if (!infos || !infos.deezerId) {
             var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
-                // Faudrait emit là aussi
                 infosFromFile = inf;
+                if (infosFromFile && infosFromFile.title && infosFromFile.artistName) {
+                  progressEmitter.emit('infos', _.clone(infosFromFile));
+                }
             });
 
             infosRequests.push(getFileInfos);
