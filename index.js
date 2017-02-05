@@ -1248,6 +1248,61 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
 };
 
 /**
+* Find videos for a track, and download it
+* @param track trackInfos
+* @param outputFolder
+* @param callback Callback function
+* @param v boolean Verbosity
+* @return Event
+*/
+at3.downloadTrack = function(track, outputFolder, callback, v) {
+    if (v === undefined) {
+        v = false;
+    }
+    const progressEmitter = new EventEmitter();
+
+    at3.findVideoForSong(track).then(function(results) {
+        if (results.length === 0) {
+            progressEmitter.emit('error', new Error("Cannot find any video matching"));
+            return callback(null, "Cannot find any video matching");
+        }
+        var i = 0;
+        progressEmitter.emit('search-end');
+        var dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
+        dl.on('download', function(infos) {
+            progressEmitter.emit('download', infos);
+        });
+        dl.on('download-end', function() {
+            progressEmitter.emit('download-end');
+        });
+        dl.on('convert', function(infos) {
+            progressEmitter.emit('convert', infos);
+        });
+        dl.on('convert-end', function() {
+            progressEmitter.emit('convert-end');
+        });
+        dl.on('infos', function(infos) {
+            progressEmitter.emit('infos', infos);
+        });
+        dl.on('end', function() {
+            progressEmitter.emit('end');
+        });
+        dl.on('error', function(error) {
+            if (i < results.length) {
+                dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
+            } else {
+                progressEmitter.emit('error', new Error(error));
+            }
+        });
+    }).catch(function() {
+        progressEmitter.emit('error', new Error("Cannot find any video matching"));
+        return callback(null, "Cannot find any video matching");
+    });
+
+    return progressEmitter;
+};
+
+/**
 * Return URLs contained in a playlist (YouTube or SoundCloud)
 * @param url
 * @return Promise(array({url: url}))
