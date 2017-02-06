@@ -1351,8 +1351,8 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
         dl.on('infos', function(infos) {
             progressEmitter.emit('infos', infos);
         });
-        dl.on('end', function() {
-            progressEmitter.emit('end');
+        dl.on('end', finalInfos => {
+            progressEmitter.emit('end', finalInfos);
         });
         dl.on('error', function(error) {
             if (i < results.length) {
