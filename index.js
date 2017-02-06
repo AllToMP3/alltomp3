@@ -190,6 +190,7 @@ at3.isURL = function(query) {
 at3.downloadWithYoutubeDl = function(url, outputFile) {
     var download = youtubedl(url, ['-f', 'bestaudio/best']);
     const downloadEmitter = new EventEmitter();
+    var aborted = false;
 
     var size = 0;
     download.on('info', function(info) {
@@ -204,6 +205,9 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
 
     var pos = 0;
     download.on('data', function data(chunk) {
+        if (aborted) {
+            abort();
+        }
         pos += chunk.length;
 
         if (size) {
@@ -217,12 +221,27 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
     });
 
     download.on('end', function end() {
+        if (aborted) {
+            return;
+        }
         downloadEmitter.emit('download-end');
     });
 
     download.on('error', function(error) {
         downloadEmitter.emit('error', new Error(error));
     });
+
+    function abort() {
+        aborted = true;
+        if (download._source && download._source.stream) {
+          download._source.stream.abort();
+        }
+        if (fs.existsSync(outputFile)) {
+          fs.unlinkSync(outputFile);
+        }
+    }
+
+    downloadEmitter.on('abort', abort);
 
     return downloadEmitter;
 };
@@ -236,6 +255,8 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
 */
 at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
     const convertEmitter = new EventEmitter();
+    var aborted = false;
+    var started = false;
 
     var convert = ffmpeg(inputFile)
     .audioBitrate(bitrate)
@@ -252,7 +273,35 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
         fs.unlinkSync(inputFile);
         convertEmitter.emit('convert-end');
     })
+    .on('error', e => {
+      if (!aborted) {
+        console.log(error);
+        convertEmitter.emit('error', e);
+      } else {
+        if (fs.existsSync(inputFile)) {
+            fs.unlink(inputFile, () => {});
+        }
+        if (fs.existsSync(outputFile)) {
+            fs.unlink(outputFile, () => {});
+        }
+      }
+    })
+    .on('start', () => {
+        started = true;
+        if (aborted) {
+            abort();
+        }
+    })
     .save(outputFile);
+
+    function abort() {
+        aborted = true;
+        if (started) {
+            convert.kill();
+        }
+    }
+
+    convertEmitter.on('abort', abort);
 
     return convertEmitter;
 };
@@ -288,6 +337,8 @@ at3.getInfosWithYoutubeDl = function(url) {
 at3.downloadSingleURL = function(url, outputFile, bitrate) {
     const progressEmitter = new EventEmitter();
     var tempFile = outputFile + '.video';
+    var downloadEnded = false;
+    var convert;
 
     var dl = at3.downloadWithYoutubeDl(url, tempFile);
 
@@ -301,9 +352,10 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
     });
 
     dl.on('download-end', function() {
+        downloadEnded = true;
         progressEmitter.emit('download-end');
 
-        var convert = at3.convertInMP3(tempFile, outputFile, bitrate);
+        convert = at3.convertInMP3(tempFile, outputFile, bitrate);
 
         convert.on('convert-progress', function(infos) {
             progressEmitter.emit('convert', {
@@ -317,6 +369,14 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
 
     dl.on('error', function(error) {
         progressEmitter.emit('error', new Error(error));
+    });
+
+    progressEmitter.on('abort', () => {
+        if (!downloadEnded) {
+            dl.emit('abort');
+        } else {
+            convert.emit('abort');
+        }
     });
 
     return progressEmitter;
@@ -824,6 +884,9 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
         callback(null, 'error');
         progressEmitter.emit('error', new Error(error));
     });
+    progressEmitter.on('abort', () => {
+        dl.emit('abort');
+    });
 
     var infosFromString, infosFromFile, infosRequests = [];
 
@@ -1260,8 +1323,12 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
         v = false;
     }
     const progressEmitter = new EventEmitter();
+    var aborted = false;
 
     at3.findVideoForSong(track).then(function(results) {
+        if (aborted) {
+          return;
+        }
         if (results.length === 0) {
             progressEmitter.emit('error', new Error("Cannot find any video matching"));
             return callback(null, "Cannot find any video matching");
@@ -1294,9 +1361,16 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
                 progressEmitter.emit('error', new Error(error));
             }
         });
+        progressEmitter.on('abort', () => {
+            dl.emit('abort');
+        });
     }).catch(function() {
         progressEmitter.emit('error', new Error("Cannot find any video matching"));
         return callback(null, "Cannot find any video matching");
+    });
+
+    progressEmitter.on('abort', () => {
+        aborted = true;
     });
 
     return progressEmitter;
@@ -1448,14 +1522,21 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
     const emitter = new EventEmitter();
     var running = 0;
     var lastIndex = 0;
+    var aborted = false;
 
     at3.getURLsInPlaylist(url).then(function (urls) {
+        if (aborted) {
+            return;
+        }
         emitter.emit('list', urls);
 
         downloadNext(urls, 0);
     });
 
     function downloadNext(urls, currentIndex) {
+        if (aborted) {
+            return;
+        }
         if (urls.length == currentIndex) {
             if (running === 0) {
                 emitter.emit('end');
@@ -1488,6 +1569,11 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
             }
         });
 
+        emitter.ont('abort', () => {
+            aborted = true;
+            dl.emit('abort');
+        });
+
         dl.on('download', function(infos) {
             currentUrl.progress.download = infos;
             emitter.emit('download', currentIndex);
@@ -1517,6 +1603,10 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
         });
     }
 
+    emitter.ont('abort', () => {
+        aborted = true;
+    });
+
     return emitter;
 };
 
@@ -1536,14 +1626,21 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
     const emitter = new EventEmitter();
     var running = 0;
     var lastIndex = 0;
+    var aborted = false;
 
     at3.getTracksInPlaylist(url).then(function (urls) {
+        if (aborted) {
+          return;
+        }
         emitter.emit('list', urls);
 
         downloadNext(urls, 0);
     });
 
     function downloadNext(urls, currentIndex) {
+        if (aborted) {
+          return;
+        }
         if (urls.length == currentIndex) {
             if (running === 0) {
                 emitter.emit('end');
@@ -1563,6 +1660,9 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
         emitter.emit('begin-url', currentIndex);
 
         at3.findVideoForSong(currentTrack).then(function (videos) {
+            if (aborted) {
+              return;
+            }
             emitter.emit('search-end', currentIndex);
 
             function downloadFinished(infos) {
@@ -1612,8 +1712,17 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
                     }
                 }
             });
+
+            emitter.on('abort', () => {
+                aborted = true;
+                dl.emit('abort');
+            });
         });
     }
+
+    emitter.on('abort', () => {
+        aborted = true;
+    });
 
     return emitter;
 };
