@@ -275,7 +275,6 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
     })
     .on('error', e => {
       if (!aborted) {
-        console.log(error);
         convertEmitter.emit('error', e);
       } else {
         if (fs.existsSync(inputFile)) {
@@ -1465,7 +1464,7 @@ at3.getTracksInPlaylist = function(url) {
                         artistName: track.artist.name,
                         deezerId: track.id,
                         album: track.album.title,
-                        cover: track.album.cover_big
+                        cover: track.album.cover
                     });
                 });
 
@@ -1495,7 +1494,7 @@ at3.getTracksInPlaylist = function(url) {
                         artistName: track.artist.name,
                         deezerId: track.id,
                         album: albumInfos.album,
-                        cover: albumInfos.cover,
+                        cover: albumInfos.cover_big,
                         duration: track.duration
                     });
                 });
@@ -1569,7 +1568,7 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
             }
         });
 
-        emitter.ont('abort', () => {
+        emitter.on('abort', () => {
             aborted = true;
             dl.emit('abort');
         });
@@ -1603,7 +1602,7 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
         });
     }
 
-    emitter.ont('abort', () => {
+    emitter.on('abort', () => {
         aborted = true;
     });
 
