@@ -1381,19 +1381,29 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
 /**
 * Return URLs contained in a playlist (YouTube or SoundCloud)
 * @param url
-* @return Promise(array({url: url}))
+* @return Promise(object)
 */
-at3.getURLsInPlaylist = function(url) {
+at3.getPlaylistURLsInfos = function(url) {
     var type = at3.guessURLType(url);
 
     if (type == 'youtube') {
         var playlistId = url.match(/list=([0-9a-zA-Z_-]+)/);
         playlistId = playlistId[1];
-        return request({
+        let playlistInfos = {};
+        let playlistq = request({
+            url: 'https://www.googleapis.com/youtube/v3/playlists?part=snippet&key=' + API_GOOGLE + '&id=' + playlistId,
+            json: true
+        }).then(function (playlistDetails) {
+            let snippet = playlistDetails.items[0].snippet;
+            playlistInfos.title = snippet.title;
+            playlistInfos.artistName = snippet.channelTitle;
+            playlistInfos.cover = snippet.thumbnails.medium.url;
+        });
+        let playlistItemsq = request({
             url: 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=' + API_GOOGLE + '&maxResults=50&playlistId=' + playlistId,
             json: true
         }).then(function (playlistDetails) {
-            var playlistItems = [];
+            let playlistItems = [];
 
             _.forEach(playlistDetails.items, function (item) {
                 if (!item.snippet || !item.snippet.thumbnails) {
@@ -1409,28 +1419,39 @@ at3.getURLsInPlaylist = function(url) {
                 playlistItems.push({
                     url: 'http://youtube.com/watch?v=' + item.snippet.resourceId.videoId,
                     title: item.snippet.title,
-                    image: highestUrl
+                    cover: highestUrl
                 });
             });
 
-            return playlistItems;
+            playlistInfos.items = playlistItems;
+        });
+        return Promise.all([playlistItemsq, playlistq]).then(() => {
+            return playlistInfos;
         });
     } else if (type == 'soundcloud') {
         return request({
             url: 'http://api.soundcloud.com/resolve?client_id=' + API_SOUNDCLOUD + '&url=' + url,
             json: true
         }).then(function (playlistDetails) {
-            var playlistItems = [];
+            let playlistInfos = {
+              title: playlistDetails.title,
+              artistName: playlistDetails.user.username,
+              cover: playlistDetails.artwork_url
+            };
+            let items = [];
 
             _.forEach(playlistDetails.tracks, function (track) {
-                playlistItems.push({
+                items.push({
                     url: track.permalink_url,
                     title: track.title,
-                    image: track.artwork_url
+                    cover: track.artwork_url,
+                    artistName: track.user.username
                 });
             });
 
-            return playlistItems;
+            playlistInfos.items = items;
+
+            return playlistInfos;
         });
     }
 };
@@ -1440,7 +1461,7 @@ at3.getURLsInPlaylist = function(url) {
 * @param url
 * @return Promise(object)
 */
-at3.getPlaylistInfos = function(url) {
+at3.getPlaylistTitlesInfos = function(url) {
     // Deezer Playlist
     // Deezer Album
     // Deezer Loved Tracks [TODO]
@@ -1460,14 +1481,14 @@ at3.getPlaylistInfos = function(url) {
                 json: true
             }).then(function (playlistDetails) {
                 let playlist = {};
-                let tracks = [];
+                let items = [];
 
                 playlist.title = playlistDetails.title;
                 playlist.artistName = playlistDetails.creator.name;
                 playlist.cover = playlistDetails.picture_big;
 
                 _.forEach(playlistDetails.tracks.data, function (track) {
-                    tracks.push({
+                    items.push({
                         title: track.title,
                         artistName: track.artist.name,
                         deezerId: track.id,
@@ -1476,7 +1497,7 @@ at3.getPlaylistInfos = function(url) {
                     });
                 });
 
-                playlist.tracks = tracks;
+                playlist.items = items;
 
                 return playlist;
             });
@@ -1497,10 +1518,10 @@ at3.getPlaylistInfos = function(url) {
                     json: true
                 });
             }).then(function (albumTracks) {
-                let tracks = [];
+                let items = [];
 
                 _.forEach(albumTracks.data, function (track) {
-                    tracks.push({
+                    items.push({
                         title: track.title,
                         artistName: track.artist.name,
                         deezerId: track.id,
@@ -1510,7 +1531,7 @@ at3.getPlaylistInfos = function(url) {
                     });
                 });
 
-                albumInfos.tracks = tracks;
+                albumInfos.items = items;
 
                 return albumInfos;
             });
@@ -1536,13 +1557,13 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
     var lastIndex = 0;
     var aborted = false;
 
-    at3.getURLsInPlaylist(url).then(function (urls) {
+    at3.getPlaylistURLsInfos(url).then(function (playlistInfos) {
         if (aborted) {
             return;
         }
-        emitter.emit('list', urls);
+        emitter.emit('playlist-infos', playlistInfos);
 
-        downloadNext(urls, 0);
+        downloadNext(playlistInfos.items, 0);
     });
 
     function downloadNext(urls, currentIndex) {
@@ -1640,13 +1661,13 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
     var lastIndex = 0;
     var aborted = false;
 
-    at3.getPlaylistInfos(url).then(function (playlistInfos) {
+    at3.getPlaylistTitlesInfos(url).then(function (playlistInfos) {
         if (aborted) {
           return;
         }
         emitter.emit('playlist-infos', playlistInfos);
 
-        downloadNext(playlistInfos.tracks, 0);
+        downloadNext(playlistInfos.items, 0);
     });
 
     function downloadNext(urls, currentIndex) {
