@@ -188,7 +188,7 @@ at3.isURL = function(query) {
 * @return Event
 */
 at3.downloadWithYoutubeDl = function(url, outputFile) {
-    var download = youtubedl(url, ['-f', 'bestaudio/best']);
+    var download = youtubedl(url, ['-f', 'bestaudio/best'], {maxBuffer: Infinity});
     const downloadEmitter = new EventEmitter();
     var aborted = false;
 
@@ -431,7 +431,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 
     // Deezer
     var requestDeezer = request({
-        url: 'http://api.deezer.com/2.0/search?q=' + encodeURIComponent(searchq),
+        url: 'https://api.deezer.com/2.0/search?q=' + encodeURIComponent(searchq),
         json: true
     }).then(function (body) {
         var title, artistName, tempTitle;
@@ -550,7 +550,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     var requests = [];
 
     var requestDeezer = request({
-        url: 'http://api.deezer.com/2.0/search?q=' + encodeURIComponent(artistName + ' ' + title),
+        url: 'https://api.deezer.com/2.0/search?q=' + encodeURIComponent(artistName + ' ' + title),
         json: true
     }).then(function (body) {
         var deezerInfos;
@@ -626,7 +626,7 @@ at3.getDeezerTrackInfos = function(trackId, v) {
     };
 
     return request({
-        url: 'http://api.deezer.com/2.0/track/' + infos.deezerId,
+        url: 'https://api.deezer.com/2.0/track/' + infos.deezerId,
         json: true
     }).then(function (trackInfos) {
         if (trackInfos.error) {
@@ -641,7 +641,7 @@ at3.getDeezerTrackInfos = function(trackId, v) {
         infos.discNumber = trackInfos.disk_number;
 
         return request({
-            url: 'http://api.deezer.com/2.0/album/' + infos.deezerAlbum,
+            url: 'https://api.deezer.com/2.0/album/' + infos.deezerAlbum,
             json: true
         });
     }).then(function (albumInfos) {
@@ -652,7 +652,7 @@ at3.getDeezerTrackInfos = function(trackId, v) {
         infos.cover = albumInfos.cover_big;
 
         return request({
-            url: 'http://api.deezer.com/2.0/genre/' + infos.genreId,
+            url: 'https://api.deezer.com/2.0/genre/' + infos.genreId,
             json: true
         });
     }).then(function (genreInfos) {
@@ -1324,7 +1324,7 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
     const progressEmitter = new EventEmitter();
     var aborted = false;
 
-    at3.findVideoForSong(track).then(function(results) {
+    at3.findVideoForSong(track, v).then(function(results) {
         if (aborted) {
           return;
         }
@@ -1334,6 +1334,9 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
         }
         var i = 0;
         progressEmitter.emit('search-end');
+        if (v) {
+          console.log("Will be downloaded:", results[i].url);
+        }
         var dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
         dl.on('download', function(infos) {
             progressEmitter.emit('download', infos);
@@ -1433,15 +1436,15 @@ at3.getURLsInPlaylist = function(url) {
 };
 
 /**
-* Returns songs in a playlist (Deezer or Spotify)
+* Returns info (title, cover, songs) about a playlist (Deezer or Spotify)
 * @param url
-* @return Promise(array(trackInfos))
+* @return Promise(object)
 */
-at3.getTracksInPlaylist = function(url) {
+at3.getPlaylistInfos = function(url) {
     // Deezer Playlist
     // Deezer Album
-    // Deezer Loved Tracks
-    // Spotify playlist
+    // Deezer Loved Tracks [TODO]
+    // Spotify playlist [TODO]
     var type = at3.guessURLType(url);
 
     var regDeezerPlaylist = /playlist\/([0-9]+)$/;
@@ -1453,10 +1456,15 @@ at3.getTracksInPlaylist = function(url) {
             var playlistId = url.match(regDeezerPlaylist)[1];
 
             return request({
-                url: 'http://api.deezer.com/playlist/' + playlistId,
+                url: 'https://api.deezer.com/playlist/' + playlistId,
                 json: true
             }).then(function (playlistDetails) {
-                var tracks = [];
+                let playlist = {};
+                let tracks = [];
+
+                playlist.title = playlistDetails.title;
+                playlist.artistName = playlistDetails.creator.name;
+                playlist.cover = playlistDetails.picture_big;
 
                 _.forEach(playlistDetails.tracks.data, function (track) {
                     tracks.push({
@@ -1468,38 +1476,43 @@ at3.getTracksInPlaylist = function(url) {
                     });
                 });
 
-                return tracks;
+                playlist.tracks = tracks;
+
+                return playlist;
             });
         } else if (regDeezerAlbum.test(url)) {
             var albumId = url.match(regDeezerAlbum)[1];
             var albumInfos = {};
 
             return request({
-                url: 'http://api.deezer.com/album/' + albumId,
+                url: 'https://api.deezer.com/album/' + albumId,
                 json: true
             }).then(function (ralbumInfos) {
                 albumInfos.cover = ralbumInfos.cover_big;
-                albumInfos.album = ralbumInfos.title;
+                albumInfos.title = ralbumInfos.title;
+                albumInfos.artistName = ralbumInfos.artist.name;
 
                 return request({
-                    url: 'http://api.deezer.com/album/' + albumId + '/tracks',
+                    url: 'https://api.deezer.com/album/' + albumId + '/tracks',
                     json: true
                 });
             }).then(function (albumTracks) {
-                var tracks = [];
+                let tracks = [];
 
                 _.forEach(albumTracks.data, function (track) {
                     tracks.push({
                         title: track.title,
                         artistName: track.artist.name,
                         deezerId: track.id,
-                        album: albumInfos.album,
-                        cover: albumInfos.cover_big,
+                        album: albumInfos.title,
+                        cover: albumInfos.cover,
                         duration: track.duration
                     });
                 });
 
-                return tracks;
+                albumInfos.tracks = tracks;
+
+                return albumInfos;
             });
         }
     }
@@ -1627,13 +1640,13 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
     var lastIndex = 0;
     var aborted = false;
 
-    at3.getTracksInPlaylist(url).then(function (urls) {
+    at3.getPlaylistInfos(url).then(function (playlistInfos) {
         if (aborted) {
           return;
         }
-        emitter.emit('list', urls);
+        emitter.emit('playlist-infos', playlistInfos);
 
-        downloadNext(urls, 0);
+        downloadNext(playlistInfos.tracks, 0);
     });
 
     function downloadNext(urls, currentIndex) {
@@ -1761,7 +1774,7 @@ at3.suggestedSongs = function(query, limit) {
   }
 
   return request({
-    uri: 'http://api.deezer.com/search?limit=' + limit + '&q=' + query,
+    uri: 'https://api.deezer.com/search?limit=' + limit + '&q=' + query,
     json: true
   }).then(results => {
     return _.map(results.data, r => {
@@ -1788,7 +1801,7 @@ at3.suggestedAlbums = function(query, limit) {
   }
 
   return request({
-    uri: 'http://api.deezer.com/search/album?limit=' + limit + '&q=' + query,
+    uri: 'https://api.deezer.com/search/album?limit=' + limit + '&q=' + query,
     json: true
   }).then(results => {
     return _.map(results.data, r => {
