@@ -8,7 +8,7 @@ const requestNoPromise = require('request');
 const _ = require('lodash');
 const acoustid = require('acoustid');
 const EyeD3 = require('eyed3');
-const eyed3 = new EyeD3({ eyed3_executable: 'eyeD3' });
+var eyed3 = new EyeD3({ eyed3_path: 'eyeD3' });
 const levenshtein = require('fast-levenshtein');
 const crypto = require('crypto');
 const cheerio = require('cheerio');
@@ -26,6 +26,25 @@ var at3 = {};
 
 // ISO 3166-1 alpha-2 country code of the user (ex: US, FR)
 at3.regionCode = 'US';
+
+at3.setEyeD3Path = function(eyeD3Path, eyeD3PathPythonPath) {
+  process.env.PYTHONPATH = eyeD3PathPythonPath;
+  eyed3 = new EyeD3({ eyed3_path: eyeD3Path });
+};
+
+at3.FPCALC_PATH = "fpcalc";
+at3.setFpcalcPath = function(fpcalcPath) {
+  at3.FPCALC_PATH = fpcalcPath;
+};
+
+at3.setFfmpegPaths = function(ffmpegPath, ffprobePath) {
+  if (ffmpegPath) {
+    at3.FFMPEG_PATH = ffmpegPath;
+  }
+  if (ffprobePath) {
+    at3.FFPROBE_PATH = ffprobePath;
+  }
+};
 
 /**
 * Find lyrics for a song
@@ -258,8 +277,14 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
     var aborted = false;
     var started = false;
 
-    var convert = ffmpeg(inputFile)
-    .audioBitrate(bitrate)
+    var convert = ffmpeg(inputFile);
+    if (at3.FFMPEG_PATH) {
+      convert.setFfmpegPath(at3.FFMPEG_PATH);
+    }
+    if (at3.FFPROBE_PATH) {
+      convert.setFfprobePath(at3.FFPROBE_PATH);
+    }
+    convert.audioBitrate(bitrate)
     .audioCodec('libmp3lame')
     .on('codecData', function(data) {
         convertEmitter.emit('convert-start');
@@ -508,7 +533,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 */
 at3.guessTrackFromFile = function (file) {
     return new Promise(function (resolve, reject) {
-        acoustid(file, { key: API_ACOUSTID }, function (err, results) {
+        acoustid(file, { key: API_ACOUSTID, fpcalc: { command: at3.FPCALC_PATH } }, function (err, results) {
             if (err || results.length === 0 || !results[0].recordings || results[0].recordings.length === 0 || !results[0].recordings[0].artists || results[0].recordings[0].artists.length === 0) {
                 resolve({});
                 return;
@@ -1232,7 +1257,7 @@ at3.findVideoForSong = function(song, v) {
     });
 };
 
-// [TODO] we could also add a method that just take the first youtube video and downlaod it
+// [TODO] we could also add a method that just take the first youtube video and download it
 /**
 * Try to find the best video matching a song request
 * @param query string
