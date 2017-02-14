@@ -891,10 +891,10 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
 
     const progressEmitter = new EventEmitter();
 
-    var tempFile = outputFolder + crypto.createHash('sha256').update(url).digest('hex') + '.mp3';
+    var tempFile = outputFolder + crypto.createHash('sha256').update(url).digest('hex').substring(0, 10) + '.mp3';
 
     // Download and convert file
-    var dl = at3.downloadSingleURL(url, tempFile, '320k');
+    var dl = at3.downloadSingleURL(url, tempFile, '256k');
     dl.on('download', function(infos) {
         progressEmitter.emit('download', infos);
     });
