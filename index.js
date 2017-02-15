@@ -30,9 +30,13 @@ at3.regionCode = 'US';
 // Folder for temporary files
 at3.tempFolder = null;
 
-at3.setEyeD3Path = function(eyeD3Path, eyeD3PathPythonPath) {
+at3.configEyeD3 = function(eyeD3Path, eyeD3PathPythonPath, metaHook) {
   process.env.PYTHONPATH = eyeD3PathPythonPath;
   eyed3 = new EyeD3({ eyed3_path: eyeD3Path });
+  if (!metaHook) {
+    metaHook = (m) => m;
+  }
+  eyed3.metaHook = metaHook;
 };
 
 at3.FPCALC_PATH = "fpcalc";
@@ -728,7 +732,7 @@ at3.tagFile = function (file, infos) {
     }
 
     return new Promise(function (resolve, reject) {
-        eyed3.updateMeta(file, meta, function (err) {
+        eyed3.updateMeta(file, eyed3.metaHook(meta), function (err) {
             if (err) {
                 console.log(err);
             }
@@ -753,7 +757,7 @@ at3.tagFile = function (file, infos) {
                             });
                         }
                     }).then(() => {
-                        eyed3.updateMeta(file, {image: coverPath}, function (err) {
+                        eyed3.updateMeta(file, eyed3.metaHook({image: coverPath}), function (err) {
                             if (err) {
                                 console.log("image error: ", err);
                             }
