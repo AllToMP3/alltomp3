@@ -27,6 +27,9 @@ var at3 = {};
 // ISO 3166-1 alpha-2 country code of the user (ex: US, FR)
 at3.regionCode = 'US';
 
+// Folder for temporary files
+at3.tempFolder = null;
+
 at3.setEyeD3Path = function(eyeD3Path, eyeD3PathPythonPath) {
   process.env.PYTHONPATH = eyeD3PathPythonPath;
   eyed3 = new EyeD3({ eyed3_path: eyeD3Path });
@@ -885,13 +888,13 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     if (callback === undefined) {
         callback = function() {};
     }
-    if (outputFolder.charAt(outputFolder.length-1) != '/') {
-        outputFolder += '/';
+    if (outputFolder.charAt(outputFolder.length-1) != path.sep) {
+        outputFolder += path.sep;
     }
 
     const progressEmitter = new EventEmitter();
 
-    var tempFile = outputFolder + crypto.createHash('sha256').update(url).digest('hex').substring(0, 10) + '.mp3';
+    var tempFile = (at3.tempFolder || outputFolder) + crypto.createHash('sha256').update(url).digest('hex').substring(0, 10) + '.mp3';
 
     // Download and convert file
     var dl = at3.downloadSingleURL(url, tempFile, '256k');
