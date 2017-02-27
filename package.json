@@ -33,7 +33,7 @@
     "bluebird": "^3.3.3",
     "chai": "^3.5.0",
     "cheerio": "^0.20.0",
-    "eyed3": "git+https://github.com/AllToMP3/node-eyed3",
+    "eyed3": "git+https://github.com/AllToMP3/node-eyed3#d5f6b80c930f5d50cacfc6ab51ed5ad06780c14b",
     "fast-levenshtein": "^1.1.3",
     "fluent-ffmpeg": "git+https://github.com/fluent-ffmpeg/node-fluent-ffmpeg#21f701430f98ae4fd53e12881e4328f1c165b45d",
     "lodash": "^4.5.0",
