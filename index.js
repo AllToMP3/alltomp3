@@ -9,6 +9,7 @@ const _ = require('lodash');
 const acoustid = require('acoustid');
 const EyeD3 = require('eyed3');
 var eyed3 = new EyeD3({ eyed3_path: 'eyeD3' });
+eyed3.metaHook = (m) => m;
 const levenshtein = require('fast-levenshtein');
 const crypto = require('crypto');
 const cheerio = require('cheerio');
