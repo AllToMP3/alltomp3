@@ -735,7 +735,7 @@ at3.tagFile = function (file, infos) {
     return new Promise(function (resolve, reject) {
         eyed3.updateMeta(file, eyed3.metaHook(meta), function (err) {
             if (err) {
-                console.log(err);
+                return reject(err);
             }
             if (infos.cover) {
                 var coverPath = file + '.cover.jpg';
@@ -759,10 +759,11 @@ at3.tagFile = function (file, infos) {
                         }
                     }).then(() => {
                         eyed3.updateMeta(file, eyed3.metaHook({image: coverPath}), function (err) {
-                            if (err) {
-                                console.log("image error: ", err);
-                            }
                             fs.unlinkSync(coverPath);
+
+                            if (err) {
+                                return reject(err);
+                            }
 
                             resolve();
                         });
@@ -1025,6 +1026,8 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
                 };
                 progressEmitter.emit('end', finalInfos);
                 callback(finalInfos);
+            }).catch(err => {
+                progressEmitter.emit('error', err);
             });
         });
     });
@@ -1328,11 +1331,12 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
             progressEmitter.emit('infos', infos);
         });
         dl.on('error', function(error) {
-            if (i < results.length) {
-                dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
-            } else {
+            // [TODO]: try to download the next video, in case of youtube-dl error only
+            // if (i < results.length) {
+            //     dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
+            // } else {
                 progressEmitter.emit('error', new Error(error));
-            }
+            // }
         });
     }).catch(function() {
         progressEmitter.emit('error', new Error("Cannot find any video matching"));
@@ -1390,11 +1394,7 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
             progressEmitter.emit('end', finalInfos);
         });
         dl.on('error', function(error) {
-            if (i < results.length) {
-                dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
-            } else {
-                progressEmitter.emit('error', new Error(error));
-            }
+            progressEmitter.emit('error', new Error(error));
         });
         progressEmitter.on('abort', () => {
             dl.emit('abort');
