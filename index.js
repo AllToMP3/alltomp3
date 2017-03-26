@@ -22,6 +22,7 @@ const lcs = require('longest-common-substring');
 const API_ACOUSTID = 'lm59lNN597';
 const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 const API_SOUNDCLOUD = 'dba290d84e6ca924414c91ac12fc3c8f';
+const API_SPOTIFY = 'ODNiZjMzMmQ4MDI1NGNlNzhkNjNkOWM2ZWM2N2M5ZTU6Mzg4OTIxY2M0ZjEyNGEwYWFjM2NiMzIzYTNiZGVlYmU=';
 
 var at3 = {};
 
@@ -206,6 +207,25 @@ at3.findLyrics = function(title, artistName) {
 */
 at3.isURL = function(query) {
     return /^http(s?):\/\//.test(query);
+};
+
+/**
+ * Get a fresh access token from Spotify API
+ * @return {Promise}
+ */
+at3.spotifyToken = function() {
+    return request.post({
+        uri: 'https://accounts.spotify.com/api/token',
+        headers: {
+            'Authorization': 'Basic ' + API_SPOTIFY
+        },
+        form: {
+            grant_type: 'client_credentials'
+        },
+        json: true
+    }).then(r => {
+        return r.access_token;
+    });
 };
 
 /**
