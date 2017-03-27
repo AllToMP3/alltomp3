@@ -1619,9 +1619,9 @@ at3.getPlaylistTitlesInfos = function(url) {
 
                 return playlist;
             });
-        } else if (regDeezerAlbum.test(url)) {
-            var albumId = url.match(regDeezerAlbum)[1];
-            var albumInfos = {};
+        } else if (regDeezerAlbum.test(url)) { // Deezer Album
+            let albumId = url.match(regDeezerAlbum)[1];
+            let albumInfos = {};
 
             return request({
                 url: 'https://api.deezer.com/album/' + albumId,
@@ -1691,6 +1691,40 @@ at3.getPlaylistTitlesInfos = function(url) {
                 playlist.items = items;
 
                 return playlist;
+            });
+        } else if (regSpotifyAlbum.test(url)) { // Spotify Album
+            let albumId = url.match(regSpotifyAlbum)[1];
+            let albumInfos = {};
+
+            return at3.spotifyToken().then(token => {
+                return request({
+                    url: 'https://api.spotify.com/v1/albums/' + albumId,
+                    json: true,
+                    headers: {
+                        Authorization: 'Bearer ' + token
+                    }
+                });
+            }).then(ralbumInfos => {
+                albumInfos.title = ralbumInfos.name;
+                albumInfos.artistName = ralbumInfos.artists[0].name;
+                albumInfos.cover = ralbumInfos.images[0].url;
+
+                let items = [];
+
+                ralbumInfos.tracks.items.forEach(track => {
+                    items.push({
+                        title: track.name,
+                        artistName: track.artists[0].name,
+                        spotifyId: track.id,
+                        album: albumInfos.title,
+                        cover: albumInfos.cover,
+                        duration: Math.ceil(track.duration_ms/1000)
+                    });
+                });
+
+                albumInfos.items = items;
+
+                return albumInfos;
             });
         }
     }
