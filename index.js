@@ -675,7 +675,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
 */
 at3.getDeezerTrackInfos = function(trackId, v) {
     var infos = {
-        deezerId : trackId
+        deezerId: trackId
     };
 
     return request({
@@ -714,6 +714,57 @@ at3.getDeezerTrackInfos = function(trackId, v) {
         if (v) {
             console.log("Deezer infos: ", infos);
         }
+
+        return infos;
+    });
+};
+
+/**
+ * Get complete information (title, artist, release date, genre, album name...)
+ * for a Spotify track
+ * @param {trackId} string The Spotify track id
+ * @param {v} boolean The verbosity
+ * @return Promise
+ */
+at3.getSpotifyTrackInfos = function (trackId, v) {
+    let infos = {
+        spotifyId: trackId
+    };
+    let token;
+
+    return at3.spotifyToken().then(t => {
+        token = t;
+
+        // 1. Get track object
+        // 2. Get album object
+        return request({
+            uri: 'https://api.spotify.com/v1/tracks/' + trackId,
+            json: true,
+            headers: {
+                Authorization: 'Bearer ' + token
+            }
+        });
+    }).then(trackInfos => {
+        infos.title = trackInfos.name;
+        infos.artistName = trackInfos.artists[0].name;
+        infos.duration = Math.ceil(trackInfos.duration_ms/1000);
+        infos.position = trackInfos.track_number;
+        infos.discNumber = trackInfos.disc_number;
+        infos.spotifyAlbum = trackInfos.album.id;
+
+        return request({
+            uri: 'https://api.spotify.com/v1/albums/' + trackInfos.album.id,
+            json: true,
+            headers: {
+                Authorization: 'Bearer ' + token
+            }
+        });
+    }).then(albumInfos => {
+        infos.album = albumInfos.name;
+        infos.cover = albumInfos.images[0].url;
+        infos.genre = albumInfos.genres[0] || '';
+        infos.nbTracks = albumInfos.tracks.total;
+        infos.releaseDate = albumInfos.release_date;
 
         return infos;
     });
@@ -917,6 +968,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     if (outputFolder.charAt(outputFolder.length-1) != path.sep) {
         outputFolder += path.sep;
     }
+    title = title || '';
 
     const progressEmitter = new EventEmitter();
 
@@ -955,9 +1007,18 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
         });
 
         infosRequests.push(getMoreInfos);
-    }
-
-    if (!infos || !infos.deezerId) {
+    } else if (infos && infos.spotifyId) {
+        // If spotify track id is provided, with fetch more information
+        let getMoreInfos = at3.getSpotifyTrackInfos(infos.spotifyId, v).then(function (inf) {
+            infosFromString = inf;
+        }).catch(function () {
+            infosFromString = {
+                title: infos.title,
+                artistName: infos.artistName
+            }
+        });
+        infosRequests.push(getMoreInfos);
+    } else {
         // Try to find information based on video title
         var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
             if (title === undefined) {
@@ -976,7 +1037,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     dl.once('end', function() {
         progressEmitter.emit('convert-end');
 
-        if (!infos || !infos.deezerId) {
+        if (!infos || (!infos.deezerId && !infos.spotifyId)) {
             var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
                 infosFromFile = inf;
                 if (infosFromFile && infosFromFile.title && infosFromFile.artistName) {
@@ -1518,11 +1579,15 @@ at3.getPlaylistTitlesInfos = function(url) {
     // Deezer Playlist
     // Deezer Album
     // Deezer Loved Tracks [TODO]
-    // Spotify playlist [TODO]
+    // Spotify playlist
+    // Spotify Album
     var type = at3.guessURLType(url);
 
     var regDeezerPlaylist = /playlist\/([0-9]+)$/;
     var regDeezerAlbum = /album\/([0-9]+)$/;
+
+    var regSpotifyPlaylist = /user\/([0-9a-zA-Z_-]+)\/playlist\/([0-9a-zA-Z]+)$/;
+    var regSpotifyAlbum = /album\/([0-9a-zA-Z]+)$/;
 
     if (type == 'deezer') {
         // Deezer Playlist
@@ -1587,6 +1652,45 @@ at3.getPlaylistTitlesInfos = function(url) {
                 albumInfos.items = items;
 
                 return albumInfos;
+            });
+        }
+    } else if (type == 'spotify') {
+        // Spotify Playlist
+        if (regSpotifyPlaylist.test(url)) {
+            let userId = url.match(regSpotifyPlaylist)[1];
+            let playlistId = url.match(regSpotifyPlaylist)[2];
+
+            return at3.spotifyToken().then(token => {
+                return request({
+                    url: 'https://api.spotify.com/v1/users/' + userId + '/playlists/' + playlistId,
+                    json: true,
+                    headers: {
+                        Authorization: 'Bearer ' + token
+                    }
+                });
+            }).then(function (playlistDetails) {
+                let playlist = {};
+                let items = [];
+
+                playlist.title = playlistDetails.name;
+                playlist.artistName = userId;
+                playlist.cover = playlistDetails.images[0].url;
+
+                playlistDetails.tracks.items.forEach(t => {
+                    let track = t.track;
+                    items.push({
+                        title: track.name,
+                        artistName: track.artists[0].name,
+                        spotifyId: track.id,
+                        album: track.album.name,
+                        cover: track.album.images[0].url,
+                        duration: Math.ceil(track.duration_ms/1000)
+                    });
+                });
+
+                playlist.items = items;
+
+                return playlist;
             });
         }
     }
@@ -1751,7 +1855,10 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
             }
             emitter.emit('search-end', currentIndex);
 
-            function downloadFinished(infos) {
+            function downloadFinished(infos, error) {
+                if (!infos || error) {
+                    return;
+                }
                 currentTrack.file = infos.file;
                 currentTrack.infos = infos.infos;
                 running--;
@@ -1823,7 +1930,7 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
 */
 at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous) {
     var type = at3.guessURLType(url);
-    var sitesTitles = ['deezer'];
+    var sitesTitles = ['deezer', 'spotify'];
     var sitesURLs = ['youtube', 'soundcloud'];
 
     if (sitesTitles.indexOf(type) >= 0) {
@@ -1914,6 +2021,11 @@ at3.typeOfQuery = function(query) {
         return 'not-supported';
     } else if (type == 'soundcloud' && /\/sets\//.test(query)) {
         return 'playlist-url';
+    } else if (type == 'spotify') {
+      if (/\/(playlist|album)\//.test(query)) {
+          return 'playlist-url';
+      }
+      return 'not-supported';
     }
 
     return 'single-url';
@@ -1931,6 +2043,8 @@ at3.guessURLType = function(url) {
         return 'soundcloud';
     } else if (/^(https?:\/\/)?(www\.)?(deezer\.([a-z]{2,4}))\//.test(url)) {
         return 'deezer';
+    } else if (/^(https?:\/\/)?((open|play)\.)?spotify\.([a-z]{2,4})/.test(url)) {
+      return 'spotify';
     }
 };
 
