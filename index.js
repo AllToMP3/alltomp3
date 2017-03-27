@@ -1904,41 +1904,43 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
                 }
             }
 
-            var i = 0;
-            var dl = at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack);
+            let i = 0;
+            handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
 
-            dl.on('download', function(infos) {
-                currentTrack.progress.download = infos;
-                emitter.emit('download', currentIndex);
-            });
-            dl.on('download-end', function() {
-                emitter.emit('download-end', currentIndex);
-                if (running < maxSimultaneous) {
-                    downloadNext(urls, lastIndex+1);
-                }
-            });
-            dl.on('convert', function(infos) {
-                currentTrack.progress.convert = infos;
-                emitter.emit('convert', currentIndex);
-            });
-            dl.on('convert-end', function() {
-                emitter.emit('convert-end', currentIndex);
-            });
-            dl.on('infos', function(infos) {
-                currentTrack.infos = infos;
-                emitter.emit('infos', currentIndex);
-            });
-            dl.on('error', function() {
-                if (i < videos.length) {
-                    i++;
-                    dl = at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack);
-                } else {
-                    emitter.emit('error', new Error(currentIndex));
+            function handleDl(dl) {
+                dl.on('download', function(infos) {
+                    currentTrack.progress.download = infos;
+                    emitter.emit('download', currentIndex);
+                });
+                dl.on('download-end', function() {
+                    emitter.emit('download-end', currentIndex);
                     if (running < maxSimultaneous) {
                         downloadNext(urls, lastIndex+1);
                     }
-                }
-            });
+                });
+                dl.on('convert', function(infos) {
+                    currentTrack.progress.convert = infos;
+                    emitter.emit('convert', currentIndex);
+                });
+                dl.on('convert-end', function() {
+                    emitter.emit('convert-end', currentIndex);
+                });
+                dl.on('infos', function(infos) {
+                    currentTrack.infos = infos;
+                    emitter.emit('infos', currentIndex);
+                });
+                dl.on('error', function() {
+                    if (i < videos.length) {
+                        i++;
+                        handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
+                    } else {
+                        emitter.emit('error', new Error(currentIndex));
+                        if (running < maxSimultaneous) {
+                            downloadNext(urls, lastIndex+1);
+                        }
+                    }
+                });
+            }
 
             emitter.on('abort', () => {
                 aborted = true;
