@@ -27,7 +27,10 @@ const API_SPOTIFY = 'ODNiZjMzMmQ4MDI1NGNlNzhkNjNkOWM2ZWM2N2M5ZTU6Mzg4OTIxY2M0ZjE
 var at3 = {};
 
 // ISO 3166-1 alpha-2 country code of the user (ex: US, FR)
-at3.regionCode = 'US';
+at3.regionCode;
+
+// ISO 639-1 two-letter language code of the user (ex: en, fr)
+at3.relevanceLanguage;
 
 // Folder for temporary files
 at3.tempFolder = null;
@@ -1120,14 +1123,15 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
 * Search a query on YouTube and return the detailed results
 * @param query string
 * @param regionCode string ISO 3166-1 alpha-2 country code (ex: FR, US)
+* @param relevanceLanguage string ISO 639-1 two-letter language code (ex: en: fr)
 * @param v boolean Verbosity
 * @return Promise
 */
-at3.searchOnYoutube = function(query, regionCode, v) {
+at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
     if (v === undefined) {
         v = false;
     }
-    if (regionCode === undefined) {
+    if (regionCode === undefined && relevanceLanguage === undefined) {
         regionCode = 'US';
     }
 
@@ -1194,8 +1198,14 @@ at3.searchOnYoutube = function(query, regionCode, v) {
     var results = [];
 
     // We simply search on YouTube
+    let localePart;
+    if (regionCode) {
+      localePart = '&regionCode=' + regionCode;
+    } else if (relevanceLanguage) {
+      localePart = '&relevanceLanguage=' + relevanceLanguage;
+    }
     return request({
-        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + '&regionCode=' + regionCode + '&maxResults=15&q=' + encodeURIComponent(query),
+        url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + localePart + '&maxResults=15&q=' + encodeURIComponent(query),
         json: true
     }).then(function (body) {
         if (!body.items || body.items.length === 0) {
@@ -1344,7 +1354,7 @@ at3.findVideoForSong = function(song, v) {
     }
 
     let query = song.title + ' - ' + song.artistName;
-    return at3.searchOnYoutube(query, at3.regionCode, v).then(youtubeResults => {
+    return at3.searchOnYoutube(query, at3.regionCode, at3.relevanceLanguage, v).then(youtubeResults => {
         return at3.findBestVideo(song, youtubeResults, v);
     });
 };

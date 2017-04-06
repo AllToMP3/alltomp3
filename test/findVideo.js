@@ -85,7 +85,7 @@ describe('findVideo', function() {
                     "title": "Tiptoe",
                     "duration": 194
                 },
-                "videos": ['https://www.youtube.com/watch?v=ajjj4pLnjz8', 'https://www.youtube.com/watch?v=UB96k1arlTk', 'https://www.youtube.com/watch?v=211bk6ctXM4']
+                "videos": ['https://www.youtube.com/watch?v=ajjj4pLnjz8', 'https://www.youtube.com/watch?v=UB96k1arlTk', 'https://www.youtube.com/watch?v=211bk6ctXM4', 'https://www.youtube.com/watch?v=zmKv2Aok1Mw']
             },
             {
                 "song": {
