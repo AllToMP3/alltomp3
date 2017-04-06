@@ -1990,6 +1990,68 @@ at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous) {
 };
 
 /**
+* Download a track from an URL
+* @param url
+* @param outputFolder
+* @param callback
+* @param v boolean Verbose
+* @return Event
+*/
+at3.downloadTrackURL = function(url, outputFolder, callback, v) {
+    if (v === undefined) {
+        v = false;
+    }
+    var type = at3.guessURLType(url);
+    const emitter = new EventEmitter();
+
+    if (type == 'spotify') {
+        let trackId = url.match(/\/track\/([0-9a-zA-Z]+)$/)[1];
+        at3.spotifyToken().then(token => {
+            return request({
+                url: 'https://api.spotify.com/v1/tracks/' + trackId,
+                json: true,
+                headers: {
+                    Authorization: 'Bearer ' + token
+                }
+            });
+        }).then(trackInfos => {
+            let track = {
+                title: trackInfos.name,
+                artistName: trackInfos.artists[0].name,
+                duration: Math.ceil(trackInfos.duration_ms/1000),
+                spotifyId: trackId,
+                cover: trackInfos.album.images[0].url
+            };
+            let e = at3.downloadTrack(track, outputFolder, callback, v);
+
+            at3.forwardEvents(e, emitter);
+        });
+    }
+
+
+  return emitter;
+};
+
+/**
+ * Forward any classical event from e1 to e2, and abort from e2 to e1
+ * @param e1 Event The source
+ * @param e2 Event the destination
+ * @return e2
+ */
+at3.forwardEvents = function(e1, e2) {
+    let events = ['download', 'download-end', 'convert', 'convert-end', 'infos', 'error', 'playlist-infos', 'begin-url', 'end-url', 'end', 'search-end'];
+    events.forEach(e => {
+        e1.on(e, data => {
+            e2.emit(e, data);
+        });
+    });
+    e2.on('abort', () => {
+        e1.emit('abort');
+    });
+    return e2;
+};
+
+/**
 * Return the suggested songs for the query
 * @param query string
 * @param limit number
@@ -2047,7 +2109,7 @@ at3.suggestedAlbums = function(query, limit) {
 /**
 * Return the type of the query
 * @param query string
-* @return string: text, single-url, playlist-url, not-supported
+* @return string: text, single-url, playlist-url, track-url, not-supported
 */
 at3.typeOfQuery = function(query) {
     if (!at3.isURL(query)) {
@@ -2070,6 +2132,8 @@ at3.typeOfQuery = function(query) {
     } else if (type == 'spotify') {
       if (/\/(playlist|album)\//.test(query)) {
           return 'playlist-url';
+      } else if (/\/track\//.test(query)) {
+          return 'track-url';
       }
       return 'not-supported';
     }
