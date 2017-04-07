@@ -1,7 +1,7 @@
 const youtubedl = require('youtube-dl');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs-extra');
 const EventEmitter = require('events');
 const request = require('request-promise');
 const requestNoPromise = require('request');
@@ -1100,7 +1100,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
             }).then(function() {
                 var finalFile = outputFolder;
                 finalFile += at3.formatSongFilename(infos.title, infos.artistName, infos.position) + '.mp3';
-                fs.renameSync(tempFile, finalFile);
+                fs.moveSync(tempFile, finalFile, { overwrite: true });
                 if (infos.lyrics) {
                     fs.unlinkSync(tempFile + '.lyrics');
                 }
