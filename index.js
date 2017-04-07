@@ -238,7 +238,7 @@ at3.spotifyToken = function() {
 * @return Event
 */
 at3.downloadWithYoutubeDl = function(url, outputFile) {
-    var download = youtubedl(url, ['-f', 'bestaudio/best'], {maxBuffer: Infinity});
+    var download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], {maxBuffer: Infinity});
     const downloadEmitter = new EventEmitter();
     var aborted = false;
 
@@ -368,7 +368,7 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
 */
 at3.getInfosWithYoutubeDl = function(url) {
     return new Promise(function (resolve, reject) {
-        youtubedl.getInfo(url, function (err, infos) {
+        youtubedl.getInfo(url, ['--no-check-certificate'], function (err, infos) {
             if (err || infos === undefined) {
                 reject();
             } else {
