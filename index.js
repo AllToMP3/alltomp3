@@ -1225,6 +1225,9 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
             }).then(function (video) {
                 video = video.items[0];
                 var ratio = 1.0;
+                if (!video.statistics) {
+                    return;
+                }
                 if (video.statistics.dislikeCount > 0) {
                     ratio = video.statistics.likeCount / video.statistics.dislikeCount;
                 }
