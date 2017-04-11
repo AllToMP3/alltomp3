@@ -942,12 +942,41 @@ at3.formatSongFilename = function (title, artist, position) {
   if (position < 10) {
     filename += "0";
   }
-  filename += position + " - ";
+    filename += position + " - ";
   }
 
   filename += _.startCase(_.toLower(_.deburr(title)));
 
   return filename;
+};
+
+/**
+* Create necessary folders for a subpath
+* @param baseFolder {string} The path of the outputfolder
+* @param subPathFormat {string} The subPath format: {artist}/{title}/
+* @param title {string} Title
+* @param artist {string} Artist
+* @return {string} The complete path
+*/
+at3.createSubPath = function (baseFolder, subPathFormat, title, artist) {
+  subPathFormat = subPathFormat.replace(/\{artist\}/g, artist);
+  subPathFormat = subPathFormat.replace(/\{title\}/g, title);
+
+  let p = path.join(baseFolder, subPathFormat);
+  if (p.charAt(p.length-1) != path.sep) {
+    p += path.sep;
+  }
+
+  let folders = subPathFormat.split(path.sep);
+  let currentFolder = baseFolder;
+  folders.forEach(f => {
+    currentFolder = path.join(currentFolder, f);
+    if (!fs.existsSync(currentFolder)) {
+      fs.mkdirSync(currentFolder);
+    }
+  });
+
+  return p;
 };
 
 /**
@@ -1745,15 +1774,19 @@ at3.getPlaylistTitlesInfos = function(url) {
 
 /**
 * Download a playlist containing URLs
-* @param url
-* @param outputFolder
-* @param callback
-* @param maxSimultaneous Maximum number of simultaneous track processing
-* @return Event
+* @param url {string}
+* @param outputFolder {string}
+* @param callback {Function}
+* @param maxSimultaneous {number} Maximum number of simultaneous track processing
+* @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
+* @return {Event}
 */
-at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultaneous) {
+at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultaneous, subPathFormat) {
   if (maxSimultaneous === undefined) {
     maxSimultaneous = 1;
+  }
+  if (subPathFormat === undefined) {
+    subPathFormat = '';
   }
 
   const emitter = new EventEmitter();
@@ -1765,6 +1798,9 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
     if (aborted) {
       return;
     }
+
+    outputFolder = at3.createSubPath(outputFolder, subPathFormat, playlistInfos.title, playlistInfos.artistName);
+
     emitter.emit('playlist-infos', playlistInfos);
 
     downloadNext(playlistInfos.items, 0);
@@ -1849,15 +1885,19 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
 
 /**
 * Download a playlist containing titles
-* @param url
-* @param outputFolder
-* @param callback
-* @param maxSimultaneous Maximum number of simultaneous track processing
-* @return Event
+* @param url {string}
+* @param outputFolder {string}
+* @param callback {Function}
+* @param maxSimultaneous {number} Maximum number of simultaneous track processing
+* @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
+* @return {Event}
 */
-at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimultaneous) {
+at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimultaneous, subPathFormat) {
   if (maxSimultaneous === undefined) {
     maxSimultaneous = 1;
+  }
+  if (subPathFormat === undefined) {
+    subPathFormat = '';
   }
 
   const emitter = new EventEmitter();
@@ -1869,6 +1909,9 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
     if (aborted) {
       return;
     }
+
+    outputFolder = at3.createSubPath(outputFolder, subPathFormat, playlistInfos.title, playlistInfos.artistName);
+
     emitter.emit('playlist-infos', playlistInfos);
 
     downloadNext(playlistInfos.items, 0);
@@ -1971,21 +2014,21 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
 
 /**
 * Download a playlist containing urls or titles
-* @param url
-* @param outputFolder
-* @param callback
-* @param maxSimultaneous Maximum number of simultaneous track processing
-* @return Event
+* @param url {string}
+* @param outputFolder {string}
+* @param callback {Function}
+* @param maxSimultaneous {number} Maximum number of simultaneous track processing
+* @return {Event}
 */
-at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous) {
+at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous, subPathFormat) {
   var type = at3.guessURLType(url);
   var sitesTitles = ['deezer', 'spotify'];
   var sitesURLs = ['youtube', 'soundcloud'];
 
   if (sitesTitles.indexOf(type) >= 0) {
-    return at3.downloadPlaylistWithTitles(url, outputFolder, callback, maxSimultaneous);
+    return at3.downloadPlaylistWithTitles(url, outputFolder, callback, maxSimultaneous, subPathFormat);
   } else if (sitesURLs.indexOf(type) >= 0) {
-    return at3.downloadPlaylistWithURLs(url, outputFolder, callback, maxSimultaneous);
+    return at3.downloadPlaylistWithURLs(url, outputFolder, callback, maxSimultaneous, subPathFormat);
   } else {
     callback(null, 'Website not supported yet');
     return (new EventEmitter()).emit('error', new Error('Website not supported yet'));
