@@ -1307,7 +1307,7 @@ at3.findBestVideo = function(song, videos, v) {
     let weights = {
       title: 30,
       hd: 0.3,
-      duration: 14,
+      duration: 20,
       views: 10,
       realLike: 15
     };
@@ -1341,7 +1341,7 @@ at3.findBestVideo = function(song, videos, v) {
     let videoScore = {
       title: sTitle*weights.title,
       hd: video.hd*weights.hd,
-      duration: Math.abs(video.duration - duration)*weights.duration,
+      duration: Math.sqrt(Math.abs(video.duration - duration))*weights.duration,
       views: (video.views/largestViews)*weights.views,
       realLike: (video.realLike/largestRealLike)*weights.realLike || -50 // video.realLike is NaN when the likes has been deactivated, which is a very bad sign
     };

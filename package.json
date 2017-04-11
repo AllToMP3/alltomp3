@@ -39,6 +39,7 @@
     "fs-extra": "^2.1.2",
     "lodash": "^4.5.0",
     "longest-common-substring": "^0.0.1",
+    "randomstring": "^1.1.5",
     "request": "^2.72.0",
     "request-promise": "^2.0.1",
     "smartcrop-sharp": "git+https://github.com/AllToMP3/smartcrop-sharp#154642d2e90812b4472fb5ff6f41498c7c2aa836",

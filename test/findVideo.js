@@ -169,6 +169,30 @@ describe('findVideo', function() {
     return testTracks(tracks, artistName);
   });
 
+  it('should find YouTube videos for Night Shift (Original Mix) by Overwerk', function () {
+    this.timeout(10000);
+
+    let artistName = "Overwerk";
+    let tracks = [
+      {
+        song: {
+          title: "Night Shift (Original Mix)",
+          duration: 541
+        },
+        videos: ['https://www.youtube.com/watch?v=SI2wnEvrepM', 'https://www.youtube.com/watch?v=87bCbQHez9k', 'https://www.youtube.com/watch?v=dtq9NNLa1O8']
+      },
+      {
+        song: {
+          title: "Last Call (Original Mix)",
+          duration: 600
+        },
+        videos: ['https://www.youtube.com/watch?v=4C9LACMJFT4', 'https://www.youtube.com/watch?v=eQMXBaB0Ehs', 'https://www.youtube.com/watch?v=RzKCHDgQZ9g']
+      }
+    ];
+
+    return testTracks(tracks, artistName);
+  });
+
   it('should find YouTube videos for single letter artist M', function () {
     this.timeout(10000);
 
