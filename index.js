@@ -331,14 +331,14 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
   })
   .on('error', e => {
     if (!aborted) {
-    convertEmitter.emit('error', e);
+      convertEmitter.emit('error', e);
     } else {
-    if (fs.existsSync(inputFile)) {
-      fs.unlink(inputFile, () => {});
-    }
-    if (fs.existsSync(outputFile)) {
-      fs.unlink(outputFile, () => {});
-    }
+      if (fs.existsSync(inputFile)) {
+        fs.unlink(inputFile, () => {});
+      }
+      if (fs.existsSync(outputFile)) {
+        fs.unlink(outputFile, () => {});
+      }
     }
   })
   .on('start', () => {
@@ -1996,12 +1996,11 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
             }
           }
         });
+        emitter.on('abort', () => {
+          aborted = true;
+          dl.emit('abort');
+        });
       }
-
-      emitter.on('abort', () => {
-        aborted = true;
-        dl.emit('abort');
-      });
     });
   }
 
