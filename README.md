@@ -6,11 +6,11 @@ Provide several useful methods to get information about a song or to guess the t
 ## Requirements
 - ffmpeg >= 2.8 with lamemp3;
 - node-acoutstid requirements (https://github.com/parshap/node-acoustid#installation - https://acoustid.org/chromaprint);
-- eyeD3.
+- eyeD3 >= 0.7.10.
 
 ## Installation
 ```
-npm install alltomp3
+npm install git+https://github.com/AllToMP3/alltomp3
 ```
 
 ```js
