@@ -2049,7 +2049,7 @@ at3.downloadTrackURL = function(url, outputFolder, callback, v) {
   var type = at3.guessURLType(url);
   const emitter = new EventEmitter();
 
-  if (type == 'spotify') {
+  if (type === 'spotify') {
     let trackId = url.match(/\/track\/([0-9a-zA-Z]+)$/)[1];
     at3.spotifyToken().then(token => {
       return request({
@@ -2068,6 +2068,13 @@ at3.downloadTrackURL = function(url, outputFolder, callback, v) {
         cover: trackInfos.album.images[0].url
       };
       let e = at3.downloadTrack(track, outputFolder, callback, v);
+
+      at3.forwardEvents(e, emitter);
+    });
+  } else if (type === 'deezer') {
+    let trackId = url.match(/\/track\/([0-9]+)/)[1];
+    at3.getDeezerTrackInfos(trackId, v).then(trackInfos => {
+      let e = at3.downloadTrack(trackInfos, outputFolder, callback, v);
 
       at3.forwardEvents(e, emitter);
     });
@@ -2170,6 +2177,8 @@ at3.typeOfQuery = function(query) {
   } else if (type == 'deezer') {
     if (/\/(playlist|album)\//.test(query)) {
       return 'playlist-url';
+    } else if (/\/track\//.test(query)) {
+      return 'track-url';
     }
     return 'not-supported';
   } else if (type == 'soundcloud' && /\/sets\//.test(query)) {
