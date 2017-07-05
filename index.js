@@ -929,6 +929,17 @@ at3.getCompleteInfosFromFile = function(file, v) {
 };
 
 /**
+* Simplify a string so it works well as a filename
+* @param {String} string
+* @return {String}
+*/
+at3.escapeForFilename = (string) => {
+    return _.startCase(_.toLower(_.deburr(string)))
+        .replace(/^\.+/, '')
+        .replace(/\.+$/, '');
+};
+
+/**
 * Return a correctly formatted filename for a song.
 * Example: "02 - On Top Of The World"
 * @param title string Title of the song
@@ -937,7 +948,7 @@ at3.getCompleteInfosFromFile = function(file, v) {
 * @return string
 */
 at3.formatSongFilename = function (title, artist, position) {
-  let filename = _.startCase(_.toLower(_.deburr(artist))) + ' - ';
+  let filename = at3.escapeForFilename(artist) + ' - ';
   if (position) {
   if (position < 10) {
     filename += "0";
@@ -945,7 +956,7 @@ at3.formatSongFilename = function (title, artist, position) {
     filename += position + " - ";
   }
 
-  filename += _.startCase(_.toLower(_.deburr(title)));
+  filename += at3.escapeForFilename(title);
 
   return filename;
 };
@@ -956,11 +967,11 @@ at3.formatSongFilename = function (title, artist, position) {
 * @param subPathFormat {string} The subPath format: {artist}/{title}/
 * @param title {string} Title
 * @param artist {string} Artist
-* @return {string} The complete path
+* @return {String} The complete path
 */
 at3.createSubPath = function (baseFolder, subPathFormat, title, artist) {
-  subPathFormat = subPathFormat.replace(/\{artist\}/g, artist);
-  subPathFormat = subPathFormat.replace(/\{title\}/g, title);
+  subPathFormat = subPathFormat.replace(/\{artist\}/g, at3.escapeForFilename(artist));
+  subPathFormat = subPathFormat.replace(/\{title\}/g, at3.escapeForFilename(title));
 
   let p = path.join(baseFolder, subPathFormat);
   if (p.charAt(p.length-1) != path.sep) {
