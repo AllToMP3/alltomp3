@@ -1639,7 +1639,7 @@ at3.getPlaylistTitlesInfos = function(url) {
   var regDeezerPlaylist = /playlist\/([0-9]+)/;
   var regDeezerAlbum = /album\/([0-9]+)/;
 
-  var regSpotifyPlaylist = /user\/([0-9a-zA-Z_-]+)\/playlist\/([0-9a-zA-Z]+)/;
+  var regSpotifyPlaylist = /user\/([0-9a-zA-Z_.-]+)\/playlist\/([0-9a-zA-Z]+)/;
   var regSpotifyAlbum = /album\/([0-9a-zA-Z]+)/;
 
   if (type == 'deezer') {
