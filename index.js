@@ -2073,7 +2073,7 @@ at3.downloadTrackURL = function(url, outputFolder, callback, v) {
   const emitter = new EventEmitter();
 
   if (type === 'spotify') {
-    let trackId = url.match(/\/track\/([0-9a-zA-Z]+)$/)[1];
+    let trackId = url.match(/\/track\/([0-9a-zA-Z]+)/)[1];
     at3.spotifyToken().then(token => {
       return request({
         url: 'https://api.spotify.com/v1/tracks/' + trackId,
