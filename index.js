@@ -1503,36 +1503,48 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
       progressEmitter.emit('error', new Error("Cannot find any video matching"));
       return callback(null, "Cannot find any video matching");
     }
-    var i = 0;
+    let i = 0;
     progressEmitter.emit('search-end');
-    if (v) {
-      console.log("Will be downloaded:", results[i].url);
-    }
-    var dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
-    dl.on('download', function(infos) {
-      progressEmitter.emit('download', infos);
-    });
-    dl.on('download-end', function() {
-      progressEmitter.emit('download-end');
-    });
-    dl.on('convert', function(infos) {
-      progressEmitter.emit('convert', infos);
-    });
-    dl.on('convert-end', function() {
-      progressEmitter.emit('convert-end');
-    });
-    dl.on('infos', function(infos) {
-      progressEmitter.emit('infos', infos);
-    });
-    dl.on('end', finalInfos => {
-      progressEmitter.emit('end', finalInfos);
-    });
-    dl.on('error', function(error) {
-      progressEmitter.emit('error', new Error(error));
-    });
-    progressEmitter.on('abort', () => {
-      dl.emit('abort');
-    });
+    const dlNext = () => {
+      if (i >= results.length) {
+        progressEmitter.emit('error', new Error("Cannot find any video matching"));
+        return;
+      }
+      if (v) {
+        console.log("Will be downloaded:", results[i].url);
+      }
+      let aborted = false;
+      let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
+      dl.on('download', function(infos) {
+        progressEmitter.emit('download', infos);
+      });
+      dl.on('download-end', function() {
+        progressEmitter.emit('download-end');
+      });
+      dl.on('convert', function(infos) {
+        progressEmitter.emit('convert', infos);
+      });
+      dl.on('convert-end', function() {
+        progressEmitter.emit('convert-end');
+      });
+      dl.on('infos', function(infos) {
+        progressEmitter.emit('infos', infos);
+      });
+      dl.on('end', finalInfos => {
+        progressEmitter.emit('end', finalInfos);
+      });
+      dl.on('error', function(error) {
+        i += 1;
+        aborted = true;
+        dlNext();
+      });
+      progressEmitter.on('abort', () => {
+        if (!aborted) {
+          dl.emit('abort');
+        }
+      });
+    };
+    dlNext();
   }).catch(function() {
     progressEmitter.emit('error', new Error("Cannot find any video matching"));
     return callback(null, "Cannot find any video matching");
