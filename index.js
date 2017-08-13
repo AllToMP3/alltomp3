@@ -1739,21 +1739,29 @@ at3.getPlaylistTitlesInfos = function(url) {
         playlist.artistName = userId;
         playlist.cover = playlistDetails.images[0].url;
 
-        playlistDetails.tracks.items.forEach(t => {
-          let track = t.track;
-          items.push({
-            title: track.name,
-            artistName: track.artists[0].name,
-            spotifyId: track.id,
-            album: track.album.name,
-            cover: track.album.images[0].url,
-            duration: Math.ceil(track.duration_ms/1000)
-          });
-        });
-
         playlist.items = items;
 
-        return playlist;
+        const processSpotifyPage = (page) => {
+          page.items.forEach(t => {
+            let track = t.track;
+            items.push({
+              title: track.name,
+              artistName: track.artists[0].name,
+              spotifyId: track.id,
+              album: track.album.name,
+              cover: track.album.images[0] ? track.album.images[0].url : undefined,
+              duration: Math.ceil(track.duration_ms/1000)
+            });
+          });
+
+          if (page.next) {
+            return at3.requestSpotify(page.next).then(processSpotifyPage);
+          } else {
+            return playlist;
+          }
+        };
+
+        return processSpotifyPage(playlistDetails.tracks);
       });
     } else if (regSpotifyAlbum.test(url)) { // Spotify Album
       let albumId = url.match(regSpotifyAlbum)[1];
