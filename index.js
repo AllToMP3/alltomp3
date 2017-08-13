@@ -2128,7 +2128,7 @@ at3.suggestedSongs = function(query, limit) {
   }
 
   return request({
-    uri: 'https://api.deezer.com/search?limit=' + limit + '&q=' + query,
+    uri: 'https://api.deezer.com/search?limit=' + limit + '&q=' + encodeURIComponent(query),
     json: true
   }).then(results => {
     return _.map(results.data, r => {
@@ -2155,7 +2155,7 @@ at3.suggestedAlbums = function(query, limit) {
   }
 
   return request({
-    uri: 'https://api.deezer.com/search/album?limit=' + limit + '&q=' + query,
+    uri: 'https://api.deezer.com/search/album?limit=' + limit + '&q=' + encodeURIComponent(query),
     json: true
   }).then(results => {
     return _.map(results.data, r => {
