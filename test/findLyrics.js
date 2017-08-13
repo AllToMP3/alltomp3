@@ -81,8 +81,8 @@ describe('findLyrics', function() {
       var lyricsQuery = alltomp3.findLyrics('Down The Road', 'C2C').then(function (lyrics) {
         lyrics = _.kebabCase(lyrics);
 
-        expect(lyrics).to.match(/^air-longplay-should-go-air-longplay-should-go/);
-        expect(lyrics).to.match(/that-train-road-blowing-out-i-cant-walk-enough-i-cant-walk-enough$/);
+        expect(lyrics).to.match(/have-no-place-to-go-have-no-place-to-go-darling/);
+        expect(lyrics).to.match(/when-that-train-rolls-up-and-i-come-walking-out/);
         done();
       });
     });
@@ -90,7 +90,7 @@ describe('findLyrics', function() {
       var lyricsQuery = alltomp3.findLyrics('Runaway (U & I)', 'Galantis').then(function (lyrics) {
         lyrics = _.kebabCase(lyrics);
 
-        expect(lyrics).to.match(/^think-i-can-fly-think-i-can-fly-when-im-with-u/);
+        expect(lyrics).to.match(/think-i-can-fly-think-i-can-fly-when-im-with-u/);
         expect(lyrics).to.match(/i-know-that-im-rich-enough-for-pride-i-see-a-billion-dollars-in-your-eyes-even-if-were-strangers/);
         done();
       });
