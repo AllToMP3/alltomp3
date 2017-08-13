@@ -232,6 +232,24 @@ at3.spotifyToken = function() {
 };
 
 /**
+ * Perform a GET request to the Spotify API `url` endpoint
+ * @param {String} url URL of Spotify API endpoint to get
+ * @return {Promise} The request
+ */
+at3.requestSpotify = (url) => {
+  return at3.spotifyToken().then(token => {
+
+    return request({
+      uri: url,
+      json: true,
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
+    });
+  });
+};
+
+/**
 * Download a single video with youtube-dl
 * @param url
 * @param outputFile
@@ -735,19 +753,7 @@ at3.getSpotifyTrackInfos = function (trackId, v) {
   };
   let token;
 
-  return at3.spotifyToken().then(t => {
-    token = t;
-
-    // 1. Get track object
-    // 2. Get album object
-    return request({
-      uri: 'https://api.spotify.com/v1/tracks/' + trackId,
-      json: true,
-      headers: {
-        Authorization: 'Bearer ' + token
-      }
-    });
-  }).then(trackInfos => {
+  return at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then(trackInfos => {
     infos.title = trackInfos.name;
     infos.artistName = trackInfos.artists[0].name;
     infos.duration = Math.ceil(trackInfos.duration_ms/1000);
@@ -1725,15 +1731,7 @@ at3.getPlaylistTitlesInfos = function(url) {
       let userId = url.match(regSpotifyPlaylist)[1];
       let playlistId = url.match(regSpotifyPlaylist)[2];
 
-      return at3.spotifyToken().then(token => {
-        return request({
-          url: 'https://api.spotify.com/v1/users/' + userId + '/playlists/' + playlistId,
-          json: true,
-          headers: {
-            Authorization: 'Bearer ' + token
-          }
-        });
-      }).then(function (playlistDetails) {
+      return at3.requestSpotify('https://api.spotify.com/v1/users/' + userId + '/playlists/' + playlistId).then((playlistDetails) => {
         let playlist = {};
         let items = [];
 
@@ -1761,15 +1759,7 @@ at3.getPlaylistTitlesInfos = function(url) {
       let albumId = url.match(regSpotifyAlbum)[1];
       let albumInfos = {};
 
-      return at3.spotifyToken().then(token => {
-        return request({
-          url: 'https://api.spotify.com/v1/albums/' + albumId,
-          json: true,
-          headers: {
-            Authorization: 'Bearer ' + token
-          }
-        });
-      }).then(ralbumInfos => {
+      return at3.requestSpotify('https://api.spotify.com/v1/albums/' + albumId).then(ralbumInfos => {
         albumInfos.title = ralbumInfos.name;
         albumInfos.artistName = ralbumInfos.artists[0].name;
         albumInfos.cover = ralbumInfos.images[0].url;
@@ -2074,15 +2064,7 @@ at3.downloadTrackURL = function(url, outputFolder, callback, v) {
 
   if (type === 'spotify') {
     let trackId = url.match(/\/track\/([0-9a-zA-Z]+)/)[1];
-    at3.spotifyToken().then(token => {
-      return request({
-        url: 'https://api.spotify.com/v1/tracks/' + trackId,
-        json: true,
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      });
-    }).then(trackInfos => {
+    at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then(trackInfos => {
       let track = {
         title: trackInfos.name,
         artistName: trackInfos.artists[0].name,
