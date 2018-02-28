@@ -751,7 +751,6 @@ at3.getSpotifyTrackInfos = function (trackId, v) {
   let infos = {
     spotifyId: trackId
   };
-  let token;
 
   return at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then(trackInfos => {
     infos.title = trackInfos.name;
@@ -761,13 +760,7 @@ at3.getSpotifyTrackInfos = function (trackId, v) {
     infos.discNumber = trackInfos.disc_number;
     infos.spotifyAlbum = trackInfos.album.id;
 
-    return request({
-      uri: 'https://api.spotify.com/v1/albums/' + trackInfos.album.id,
-      json: true,
-      headers: {
-        Authorization: 'Bearer ' + token
-      }
-    });
+    return at3.requestSpotify('https://api.spotify.com/v1/albums/' + trackInfos.album.id);
   }).then(albumInfos => {
     infos.album = albumInfos.name;
     infos.cover = albumInfos.images[0].url;
