@@ -42,7 +42,7 @@
     "randomstring": "^1.1.5",
     "request": "^2.72.0",
     "request-promise": "^2.0.1",
-    "sharp": "github:lovell/sharp#prebuild",
+    "sharp": "git+https://github.com/lovell/sharp#f23a8dc",
     "smartcrop-sharp": "git+https://github.com/AllToMP3/smartcrop-sharp#43e9085",
     "youtube-dl": "^1.12.2"
   }
