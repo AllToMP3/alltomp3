@@ -1,5 +1,5 @@
 # alltomp3 [![CircleCI Status](https://circleci.com/gh/AllToMP3/alltomp3.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/AllToMP3/alltomp3)
-Node module to download and convert in MP3 with tags an online video.
+Download and convert an online video in MP3 with tags.
 
 Provide several useful methods to get information about a song or to guess the track matching a YouTube video.
 
@@ -10,7 +10,7 @@ Provide several useful methods to get information about a song or to guess the t
 
 ## Installation
 ```
-npm install git+https://github.com/AllToMP3/alltomp3
+npm install alltomp3
 ```
 
 ```js
@@ -61,7 +61,7 @@ Each time a `trackInfos` object is referred, it corresponds to a JavaScript obje
 
 
 ### downloadAndTagSingleURL(url, outputFolder, callback, title, verbose)
-Download, convert and tag the video from `url`. Does not work with playlists, only with single videos.  
+Download, convert and tag the video from `url`. Does not work with playlists, only with single videos.
 The callback function takes one argument, an object containing the following fields:
 - `file`: the name of the output file
 - `infos`: a `trackInfos` object
@@ -88,7 +88,7 @@ This event is emitted at the end (when the file has been downloaded, converted a
 - `infos`: a `trackInfos` object
 
 ### findAndDownload(query, outputFolder, callback, verbose)
-Find a YouTube music video matching the query, download and tag it.  
+Find a YouTube music video matching the query, download and tag it.
 The callback function takes two arguments, first is an object containing the following fields:
 - `file`: the name of the output file
 - `infos`: a `trackInfos` object
