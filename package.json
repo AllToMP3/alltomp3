@@ -1,6 +1,6 @@
 {
   "name": "alltomp3",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Download and convert in MP3 with tags online videos",
   "main": "index.js",
   "scripts": {
@@ -44,6 +44,6 @@
     "request-promise": "^2.0.1",
     "sharp": "^0.20.8",
     "smartcrop-sharp": "git+https://github.com/AllToMP3/smartcrop-sharp.git#9d65314",
-    "youtube-dl": "^1.12.2"
+    "youtube-dl": "git+https://github.com/AllToMP3/node-youtube-dl.git#0f931a4"
   }
 }
