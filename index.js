@@ -8,7 +8,7 @@ const requestNoPromise = require('request');
 const _ = require('lodash');
 const acoustid = require('acoustid');
 const EyeD3 = require('eyed3');
-var eyed3 = new EyeD3({ eyed3_path: 'eyeD3' });
+let eyed3 = new EyeD3({ eyed3_path: 'eyeD3' });
 eyed3.metaHook = (m) => m;
 const levenshtein = require('fast-levenshtein');
 const randomstring = require('randomstring');
@@ -24,7 +24,7 @@ const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
 const API_SOUNDCLOUD = 'dba290d84e6ca924414c91ac12fc3c8f';
 const API_SPOTIFY = 'ODNiZjMzMmQ4MDI1NGNlNzhkNjNkOWM2ZWM2N2M5ZTU6Mzg4OTIxY2M0ZjEyNGEwYWFjM2NiMzIzYTNiZGVlYmU=';
 
-var at3 = {};
+const at3 = {};
 
 // ISO 3166-1 alpha-2 country code of the user (ex: US, FR)
 at3.regionCode;
@@ -35,7 +35,7 @@ at3.relevanceLanguage;
 // Folder for temporary files
 at3.tempFolder = null;
 
-at3.configEyeD3 = function(eyeD3Path, eyeD3PathPythonPath, metaHook) {
+at3.configEyeD3 = (eyeD3Path, eyeD3PathPythonPath, metaHook) => {
   process.env.PYTHONPATH = eyeD3PathPythonPath;
   eyed3 = new EyeD3({ eyed3_path: eyeD3Path });
   if (!metaHook) {
@@ -45,11 +45,11 @@ at3.configEyeD3 = function(eyeD3Path, eyeD3PathPythonPath, metaHook) {
 };
 
 at3.FPCALC_PATH = "fpcalc";
-at3.setFpcalcPath = function(fpcalcPath) {
+at3.setFpcalcPath = (fpcalcPath) => {
   at3.FPCALC_PATH = fpcalcPath;
 };
 
-at3.setFfmpegPaths = function(ffmpegPath, ffprobePath) {
+at3.setFfmpegPaths = (ffmpegPath, ffprobePath) => {
   if (ffmpegPath) {
     at3.FFMPEG_PATH = ffmpegPath;
   }
@@ -64,10 +64,10 @@ at3.setFfmpegPaths = function(ffmpegPath, ffprobePath) {
 * @param artistName string
 * @return Promise
 */
-at3.findLyrics = function(title, artistName) {
-  var promises = [];
+at3.findLyrics = (title, artistName) => {
+  let promises = [];
 
-  function textln(html) {
+  const textln = (html) => {
     html.find('br').replaceWith('\n');
     html.find('script').replaceWith('');
     html.find('#video-musictory').replaceWith('');
@@ -79,95 +79,94 @@ at3.findLyrics = function(title, artistName) {
     html = html.replace(/ +/g, ' ');
     html = html.replace(/\n /g, '\n');
     return html;
-  }
+  };
 
-  function lyricsUrl(title) {
+  const lyricsUrl = (title) => {
   	return _.kebabCase(_.trim(_.toLower(_.deburr(title))));
-  }
-  function lyricsManiaUrl(title) {
+  };
+  const lyricsManiaUrl = (title) => {
   	return _.snakeCase(_.trim(_.toLower(_.deburr(title))));
-  }
-  function lyricsManiaUrlAlt(title) {
+  };
+  const lyricsManiaUrlAlt = (title) => {
     title = _.trim(_.toLower(title));
     title = title.replace("'", '');
     title = title.replace(' ', '_');
     title = title.replace(/_+/g, '_');
     return title;
-  }
+  };
 
-  var reqWikia = request({
+  const reqWikia = request({
     uri: 'http://lyrics.wikia.com/wiki/' + encodeURIComponent(artistName) + ':' + encodeURIComponent(title),
-    transform: function (body) {
+    transform: (body) => {
       return cheerio.load(body);
-    }
-  }).then(function($) {
+    },
+  }).then(($) => {
     return textln($('.lyricbox'));
   });
 
-  var reqParolesNet = request({
+  const reqParolesNet = request({
     uri: 'http://www.paroles.net/' + lyricsUrl(artistName) + '/paroles-' + lyricsUrl(title),
-    transform: function (body) {
+    transform: (body) => {
       return cheerio.load(body);
-    }
-  }).then(function($) {
+    },
+  }).then(($) => {
     if ($('.song-text').length === 0) {
       return Promise.reject();
     }
     return textln($('.song-text'));
   });
 
-  var reqLyricsMania1 = request({
+  const reqLyricsMania1 = request({
     uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_lyrics_' + lyricsManiaUrl(artistName) + '.html',
-    transform: function (body) {
+    transform: (body) => {
       return cheerio.load(body);
-    }
-  }).then(function($) {
+    },
+  }).then(($) => {
     if ($('.lyrics-body').length === 0) {
       return Promise.reject();
     }
     return textln($('.lyrics-body'));
   });
 
-  var reqLyricsMania2 = request({
+  const reqLyricsMania2 = request({
     uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_' + lyricsManiaUrl(artistName) + '.html',
-    transform: function (body) {
+    transform: (body) => {
       return cheerio.load(body);
     }
-  }).then(function($) {
+  }).then(($) => {
     if ($('.lyrics-body').length === 0) {
       return Promise.reject();
     }
     return textln($('.lyrics-body'));
   });
 
-  var reqLyricsMania3 = request({
+  const reqLyricsMania3 = request({
     uri: 'http://www.lyricsmania.com/' + lyricsManiaUrlAlt(title) + '_lyrics_' + encodeURIComponent(lyricsManiaUrlAlt(artistName)) + '.html',
-    transform: function (body) {
+    transform: (body) => {
       return cheerio.load(body);
-    }
-  }).then(function($) {
+    },
+  }).then(($) => {
     if ($('.lyrics-body').length === 0) {
       return Promise.reject();
     }
-
     return textln($('.lyrics-body'));
   });
 
-  var reqSweetLyrics = request({
+  const reqSweetLyrics = request({
     method: 'POST',
     uri: 'http://www.sweetslyrics.com/search.php',
     form: {
       search: 'title',
-      searchtext: title
+      searchtext: title,
     },
-    transform: function (body) {
+    transform: (body) => {
       return cheerio.load(body);
-    }
-  }).then(function($) {
-    var closestLink, closestScore = -1;
-    _.forEach($('.search_results_row_color'), function (e) {
-      var artist = $(e).text().replace(/ - .+$/, '');
-      var currentScore = levenshtein.get(artistName, artist);
+    },
+  }).then(($) => {
+    let closestLink, closestScore = -1;
+    _.forEach($('.search_results_row_color'), (e) => {
+      let artist = $(e).text().replace(/ - .+$/, '');
+      let currentScore = levenshtein.get(artistName, artist);
       if (closestScore == -1 || currentScore < closestScore) {
         closestScore = currentScore;
         closestLink = $(e).find('a').last().attr('href');
@@ -178,11 +177,11 @@ at3.findLyrics = function(title, artistName) {
     }
     return request({
       uri: 'http://www.sweetslyrics.com/' + closestLink,
-      transform: function (body) {
+      transform: (body) => {
         return cheerio.load(body);
-      }
+      },
     });
-  }).then(function($) {
+  }).then(($) => {
     return textln($('.lyric_full_text'));
   });
 
@@ -197,7 +196,7 @@ at3.findLyrics = function(title, artistName) {
   promises.push(reqLyricsMania3);
   promises.push(reqSweetLyrics);
 
-  return Promise.any(promises).then(function(lyrics) {
+  return Promise.any(promises).then((lyrics) => {
     return lyrics;
   });
 };
@@ -208,7 +207,7 @@ at3.findLyrics = function(title, artistName) {
 * @param query string
 * @return boolean
 */
-at3.isURL = function(query) {
+at3.isURL = (query) => {
   return /^http(s?):\/\//.test(query);
 };
 
@@ -216,17 +215,17 @@ at3.isURL = function(query) {
  * Get a fresh access token from Spotify API
  * @return {Promise}
  */
-at3.spotifyToken = function() {
+at3.spotifyToken = () => {
   return request.post({
     uri: 'https://accounts.spotify.com/api/token',
     headers: {
-      'Authorization': 'Basic ' + API_SPOTIFY
+      'Authorization': 'Basic ' + API_SPOTIFY,
     },
     form: {
-      grant_type: 'client_credentials'
+      grant_type: 'client_credentials',
     },
-    json: true
-  }).then(r => {
+    json: true,
+  }).then((r) => {
     return r.access_token;
   });
 };
@@ -237,14 +236,14 @@ at3.spotifyToken = function() {
  * @return {Promise} The request
  */
 at3.requestSpotify = (url) => {
-  return at3.spotifyToken().then(token => {
+  return at3.spotifyToken().then((token) => {
 
     return request({
       uri: url,
       json: true,
       headers: {
-        Authorization: 'Bearer ' + token
-      }
+        Authorization: 'Bearer ' + token,
+      },
     });
   });
 };
@@ -255,51 +254,51 @@ at3.requestSpotify = (url) => {
 * @param outputFile
 * @return Event
 */
-at3.downloadWithYoutubeDl = function(url, outputFile) {
-  var download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], {maxBuffer: Infinity});
+at3.downloadWithYoutubeDl = (url, outputFile) => {
+  let download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], {maxBuffer: Infinity});
   const downloadEmitter = new EventEmitter();
-  var aborted = false;
+  let aborted = false;
 
-  var size = 0;
-  download.on('info', function(info) {
+  let size = 0;
+  download.on('info', (info) => {
     size = info.size;
 
     downloadEmitter.emit('download-start', {
-      size: size
+      size: size,
     });
 
     download.pipe(fs.createWriteStream(outputFile));
   });
 
-  var pos = 0;
-  download.on('data', function data(chunk) {
+  let pos = 0;
+  download.on('data', (chunk) => {
     if (aborted) {
       abort();
     }
     pos += chunk.length;
 
     if (size) {
-      var percent = (pos / size * 100).toFixed(2);
+      let percent = (pos / size * 100).toFixed(2);
 
       downloadEmitter.emit('download-progress', {
         downloaded: pos,
-        progress: percent
+        progress: percent,
       });
     }
   });
 
-  download.on('end', function end() {
+  download.on('end', () => {
     if (aborted) {
       return;
     }
     downloadEmitter.emit('download-end');
   });
 
-  download.on('error', function(error) {
+  download.on('error', (error) => {
     downloadEmitter.emit('error', new Error(error));
   });
 
-  function abort() {
+  const abort = () => {
     aborted = true;
     if (download._source && download._source.stream) {
       download._source.stream.abort();
@@ -321,12 +320,12 @@ at3.downloadWithYoutubeDl = function(url, outputFile) {
 * @param bitrate string
 * @return Event
 */
-at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
+at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
   const convertEmitter = new EventEmitter();
-  var aborted = false;
-  var started = false;
+  let aborted = false;
+  let started = false;
 
-  var convert = ffmpeg(inputFile);
+  let convert = ffmpeg(inputFile);
   if (at3.FFMPEG_PATH) {
     convert.setFfmpegPath(at3.FFMPEG_PATH);
   }
@@ -335,19 +334,19 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
   }
   convert.audioBitrate(bitrate)
   .audioCodec('libmp3lame')
-  .on('codecData', function(data) {
+  .on('codecData', (_data) => {
     convertEmitter.emit('convert-start');
   })
-  .on('progress', function(progress) {
+  .on('progress', (progress) => {
     convertEmitter.emit('convert-progress', {
-      progress: progress.percent
+      progress: progress.percent,
     });
   })
-  .on('end', function() {
+  .on('end', () => {
     fs.unlinkSync(inputFile);
     convertEmitter.emit('convert-end');
   })
-  .on('error', e => {
+  .on('error', (e) => {
     if (!aborted) {
       convertEmitter.emit('error', e);
     } else {
@@ -367,7 +366,7 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
   })
   .save(outputFile);
 
-  function abort() {
+  const abort = () => {
     aborted = true;
     if (started) {
       convert.kill();
@@ -384,16 +383,16 @@ at3.convertInMP3 = function(inputFile, outputFile, bitrate) {
 * @param url
 * @return Promise
 */
-at3.getInfosWithYoutubeDl = function(url) {
-  return new Promise(function (resolve, reject) {
-    youtubedl.getInfo(url, ['--no-check-certificate'], function (err, infos) {
+at3.getInfosWithYoutubeDl = (url) => {
+  return new Promise((resolve, reject) => {
+    youtubedl.getInfo(url, ['--no-check-certificate'], (err, infos) => {
       if (err || infos === undefined) {
         reject();
       } else {
         resolve({
           title: infos.title,
           author: infos.uploader,
-          picture: infos.thumbnail
+          picture: infos.thumbnail,
         });
       }
     });
@@ -407,40 +406,40 @@ at3.getInfosWithYoutubeDl = function(url) {
 * @param bitrate
 * @return Event
 */
-at3.downloadSingleURL = function(url, outputFile, bitrate) {
+at3.downloadSingleURL = (url, outputFile, bitrate) => {
   const progressEmitter = new EventEmitter();
-  var tempFile = outputFile + '.video';
-  var downloadEnded = false;
-  var convert;
+  let tempFile = outputFile + '.video';
+  let downloadEnded = false;
+  let convert;
 
-  var dl = at3.downloadWithYoutubeDl(url, tempFile);
+  let dl = at3.downloadWithYoutubeDl(url, tempFile);
 
-  dl.on('download-start', function() {
+  dl.on('download-start', () => {
     progressEmitter.emit('start');
   });
-  dl.on('download-progress', function(infos) {
+  dl.on('download-progress', (infos) => {
     progressEmitter.emit('download', {
-      progress: infos.progress
+      progress: infos.progress,
     });
   });
 
-  dl.on('download-end', function() {
+  dl.on('download-end', () => {
     downloadEnded = true;
     progressEmitter.emit('download-end');
 
     convert = at3.convertInMP3(tempFile, outputFile, bitrate);
 
-    convert.on('convert-progress', function(infos) {
+    convert.on('convert-progress', (infos) => {
       progressEmitter.emit('convert', {
-        progress: infos.progress
+        progress: infos.progress,
       });
     });
-    convert.on('convert-end', function() {
+    convert.on('convert-end', () => {
       progressEmitter.emit('end');
     });
   });
 
-  dl.on('error', function(error) {
+  dl.on('error', (error) => {
     progressEmitter.emit('error', new Error(error));
   });
 
@@ -464,7 +463,7 @@ at3.downloadSingleURL = function(url, outputFile, bitrate) {
 * @param v boolean Verbose
 * @return Promise
 */
-at3.guessTrackFromString = function(query, exact, last, v) {
+at3.guessTrackFromString = (query, exact, last, v) => {
   // [TODO] Replace exact by a level of strictness
   // 0: no change at all
   // 4: remove every thing useless
@@ -482,7 +481,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     console.log("Query: ", query);
   }
 
-  var searchq = query;
+  let searchq = query;
   if (!exact) {
     searchq = searchq.replace(/\(.*\)/g, '');
     searchq = searchq.replace(/\[.*\]/g, '');
@@ -494,8 +493,8 @@ at3.guessTrackFromString = function(query, exact, last, v) {
     searchq = searchq.replace(/bande originale/i, '');
   }
 
-  var requests = [];
-  var infos = {
+  const requests = [];
+  const infos = {
     title: null,
     artistName: null,
   };
@@ -504,18 +503,18 @@ at3.guessTrackFromString = function(query, exact, last, v) {
   // [TODO] Adding Spotify
 
   // Deezer
-  var requestDeezer = request({
+  const requestDeezer = request({
     url: 'https://api.deezer.com/2.0/search?q=' + encodeURIComponent(searchq),
-    json: true
-  }).then(function (body) {
-    var title, artistName, tempTitle;
-    _.forEach(body.data, function (s) {
+    json: true,
+  }).then((body) => {
+    let title, artistName, tempTitle;
+    _.forEach(body.data, (s) => {
       if (!title) {
         if (vsimpleName(searchq,exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
           if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title_short), 'ig')) || vsimpleName(s.title_short).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
             artistName = s.artist.name;
             title = s.title;
-          } else if(!artistName) {
+          } else if (!artistName) {
             artistName = s.artist.name;
             tempTitle = s.title;
           }
@@ -532,12 +531,12 @@ at3.guessTrackFromString = function(query, exact, last, v) {
   });
 
   // iTunes
-  var requestiTunes = request({
+  const requestiTunes = request({
     url: 'https://itunes.apple.com/search?media=music&term=' + encodeURIComponent(searchq),
-    json: true
-  }).then(function (body) {
-    var title, artistName, tempTitle;
-    _.forEach(body.results, function (s) {
+    json: true,
+  }).then((body) => {
+    let title, artistName, tempTitle;
+    _.forEach(body.results, (s) => {
       if (!title) {
         if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artistName), 'gi'))) {
           if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
@@ -565,7 +564,7 @@ at3.guessTrackFromString = function(query, exact, last, v) {
   requests.push(requestDeezer);
   requests.push(requestiTunes);
 
-  return Promise.all(requests).then(function() {
+  return Promise.all(requests).then(() => {
     if (!last && (!infos.title || !infos.artistName)) {
       searchq = searchq.replace(/f(ea)?t(\.)? [^-]+/ig,' ');
       return at3.guessTrackFromString(searchq, false, true, v);
@@ -580,16 +579,16 @@ at3.guessTrackFromString = function(query, exact, last, v) {
 * @param file
 * @return Promise
 */
-at3.guessTrackFromFile = function (file) {
-  return new Promise(function (resolve, reject) {
-    acoustid(file, { key: API_ACOUSTID, fpcalc: { command: at3.FPCALC_PATH } }, function (err, results) {
+at3.guessTrackFromFile = (file) => {
+  return new Promise((resolve, _reject) => {
+    acoustid(file, { key: API_ACOUSTID, fpcalc: { command: at3.FPCALC_PATH } }, (err, results) => {
       if (err || results.length === 0 || !results[0].recordings || results[0].recordings.length === 0 || !results[0].recordings[0].artists || results[0].recordings[0].artists.length === 0) {
         resolve({});
         return;
       }
       resolve({
         title: results[0].recordings[0].title,
-        artistName: results[0].recordings[0].artists[0].name
+        artistName: results[0].recordings[0].artists[0].name,
       });
     });
   });
@@ -604,7 +603,7 @@ at3.guessTrackFromFile = function (file) {
 * @param v boolean Verbose
 * @return Promise
 */
-at3.retrieveTrackInformations = function (title, artistName, exact, v) {
+at3.retrieveTrackInformations = (title, artistName, exact, v) => {
   if (exact === undefined) {
     exact = false;
   }
@@ -616,19 +615,19 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
     title = title.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
   }
 
-  var infos = {
+  const infos = {
     title: title,
     artistName: artistName
   };
 
-  var requests = [];
+  const requests = [];
 
-  var requestDeezer = request({
+  const requestDeezer = request({
     url: 'https://api.deezer.com/2.0/search?q=' + encodeURIComponent(artistName + ' ' + title),
-    json: true
-  }).then(function (body) {
-    var deezerInfos;
-    _.forEach(body.data, function (s) {
+    json: true,
+  }).then((body) => {
+    let deezerInfos;
+    _.forEach(body.data, (s) => {
       if(!infos.deezerId && imatch(vsimpleName(title), vsimpleName(s.title)) && imatch(vsimpleName(artistName), vsimpleName(s.artist.name))) {
         infos.deezerId = s.id;
         deezerInfos = _.clone(s);
@@ -638,20 +637,20 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
       infos.artistName = deezerInfos.artist.name;
       infos.title = deezerInfos.title;
 
-      return at3.getDeezerTrackInfos(infos.deezerId, v).then(function (deezerInfos) {
+      return at3.getDeezerTrackInfos(infos.deezerId, v).then((deezerInfos) => {
         infos = deezerInfos;
-      }).catch(function () {
+      }).catch(() => {
 
       });
     }
   });
 
-  var requestiTunes = request({
+  const requestiTunes = request({
     url: 'https://itunes.apple.com/search?media=music&term=' + encodeURIComponent(artistName + ' ' + title),
-    json: true
-  }).then(function (body) {
-    var itunesInfos;
-    _.forEach(body.results, function (s) {
+    json: true,
+  }).then((body) => {
+    let itunesInfos;
+    _.forEach(body.results, (s) => {
       if (!infos.itunesId && (imatch(vsimpleName(title), vsimpleName(s.trackName)) || imatch(vsimpleName(title), vsimpleName(s.trackCensoredName))) && imatch(vsimpleName(artistName), vsimpleName(s.artistName))) {
         infos.itunesId = s.trackId;
         itunesInfos = _.clone(s);
@@ -683,9 +682,7 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
   requests.push(requestDeezer);
   requests.push(requestiTunes);
 
-  return Promise.all(requests).then(function () {
-    return infos;
-  });
+  return Promise.all(requests).then(() => infos);
 };
 
 /**
@@ -694,15 +691,15 @@ at3.retrieveTrackInformations = function (title, artistName, exact, v) {
 * @param v boolean Verbosity
 * @return Promise(trackInfos)
 */
-at3.getDeezerTrackInfos = function(trackId, v) {
-  var infos = {
+at3.getDeezerTrackInfos = (trackId, v) => {
+  const infos = {
     deezerId: trackId
   };
 
   return request({
     url: 'https://api.deezer.com/2.0/track/' + infos.deezerId,
-    json: true
-  }).then(function (trackInfos) {
+    json: true,
+  }).then((trackInfos) => {
     if (trackInfos.error) {
       return Promise.reject();
     }
@@ -716,9 +713,9 @@ at3.getDeezerTrackInfos = function(trackId, v) {
 
     return request({
       url: 'https://api.deezer.com/2.0/album/' + infos.deezerAlbum,
-      json: true
+      json: true,
     });
-  }).then(function (albumInfos) {
+  }).then((albumInfos) => {
     infos.album = albumInfos.title;
     infos.releaseDate = albumInfos.release_date;
     infos.nbTracks = albumInfos.tracks.data.length;
@@ -727,9 +724,9 @@ at3.getDeezerTrackInfos = function(trackId, v) {
 
     return request({
       url: 'https://api.deezer.com/2.0/genre/' + infos.genreId,
-      json: true
+      json: true,
     });
-  }).then(function (genreInfos) {
+  }).then((genreInfos) => {
     infos.genre = genreInfos.name;
 
     if (v) {
@@ -747,12 +744,12 @@ at3.getDeezerTrackInfos = function(trackId, v) {
  * @param {v} boolean The verbosity
  * @return Promise
  */
-at3.getSpotifyTrackInfos = function (trackId, v) {
-  let infos = {
+at3.getSpotifyTrackInfos = (trackId, v) => {
+  const infos = {
     spotifyId: trackId
   };
 
-  return at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then(trackInfos => {
+  return at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then((trackInfos) => {
     infos.title = trackInfos.name;
     infos.artistName = trackInfos.artists[0].name;
     infos.duration = Math.ceil(trackInfos.duration_ms/1000);
@@ -778,11 +775,12 @@ at3.getSpotifyTrackInfos = function (trackId, v) {
 * @param infos
 * @return Promise
 */
-at3.tagFile = function (file, infos) {
-  var meta = {
+at3.tagFile = (file, infos) => {
+  const meta = {
     title: infos.title,
     artist: infos.artistName
   };
+
   if (infos.album) {
     meta.album = infos.album;
   }
@@ -805,24 +803,24 @@ at3.tagFile = function (file, infos) {
     meta.genre = infos.genre.replace(/\/.+/g, '');
   }
 
-  return new Promise(function (resolve, reject) {
-    eyed3.updateMeta(file, eyed3.metaHook(meta), function (err) {
+  return new Promise((resolve, reject) => {
+    eyed3.updateMeta(file, eyed3.metaHook(meta), (err) => {
       if (err) {
         return reject(err);
       }
       if (infos.cover) {
-        var coverPath = file + '.cover.jpg';
+        let coverPath = file + '.cover.jpg';
 
-        requestNoPromise(infos.cover, function () {
+        requestNoPromise(infos.cover, () => {
 
           // Check that the cover is a square
           const coverFile = sharp(coverPath);
-          coverFile.metadata().then(metadata => {
+          coverFile.metadata().then((metadata) => {
             if (metadata.width != metadata.height) {
               // In that case we will crop the cover to get a square
               const tempCoverPath = file + '.cover.resized.jpg';
-              return smartcrop.crop(coverPath, {width: 100, height: 100}).then(function(result) {
-                var crop = result.topCrop;
+              return smartcrop.crop(coverPath, {width: 100, height: 100}).then((result) => {
+                let crop = result.topCrop;
                 return coverFile
                 .extract({width: crop.width, height: crop.height, left: crop.x, top: crop.y})
                 .toFile(tempCoverPath);
@@ -831,7 +829,7 @@ at3.tagFile = function (file, infos) {
               });
             }
           }).then(() => {
-            eyed3.updateMeta(file, eyed3.metaHook({image: coverPath}), function (err) {
+            eyed3.updateMeta(file, eyed3.metaHook({image: coverPath}), (err) => {
               fs.unlinkSync(coverPath);
 
               if (err) {
@@ -856,15 +854,15 @@ at3.tagFile = function (file, infos) {
 * @param v boolean Verbosity
 * @return Promise(object)
 */
-at3.getCompleteInfosFromURL = function(url, v) {
-  var infosFromString;
+at3.getCompleteInfosFromURL = (url, v) => {
+  let infosFromString;
   // Try to find information based on video title
-  return at3.getInfosWithYoutubeDl(url).then(function(videoInfos) {
+  return at3.getInfosWithYoutubeDl(url).then((videoInfos) => {
     infosFromString = {
       title: videoInfos.title,
       artistName: videoInfos.author,
       cover: videoInfos.picture.replace('hqdefault', 'mqdefault'), // [TODO]: getting a better resolution and removing the black borders
-      originalTitle: videoInfos.title
+      originalTitle: videoInfos.title,
     };
 
     if (v) {
@@ -874,13 +872,13 @@ at3.getCompleteInfosFromURL = function(url, v) {
     // progressEmitter.emit('infos', _.clone(infosFromString));
 
     return at3.guessTrackFromString(videoInfos.title, false, false, v);
-  }).then(function (guessStringInfos) {
+  }).then((guessStringInfos) => {
     if (guessStringInfos.title && guessStringInfos.artistName) {
       return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
     } else {
       return Promise.resolve();
     }
-  }).then(function (guessStringInfos) {
+  }).then((guessStringInfos) => {
     if (guessStringInfos) {
       guessStringInfos.originalTitle = infosFromString.originalTitle;
       infosFromString = guessStringInfos;
@@ -895,7 +893,7 @@ at3.getCompleteInfosFromURL = function(url, v) {
     }
 
     return infosFromString;
-  }).catch(function(error) {
+  }).catch((_error) => {
     // The download must have failed to, and emit an error
   });
 };
@@ -906,14 +904,14 @@ at3.getCompleteInfosFromURL = function(url, v) {
 * @param v boolean Verbosity
 * @return Promise(object)
 */
-at3.getCompleteInfosFromFile = function(file, v) {
-  return at3.guessTrackFromFile(file).then(function (guessFileInfos) {
+at3.getCompleteInfosFromFile = (file, v) => {
+  return at3.guessTrackFromFile(file).then((guessFileInfos) => {
     if (guessFileInfos.title && guessFileInfos.artistName) {
       return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
     } else {
       return Promise.resolve();
     }
-  }).then(function (guessFileInfos) {
+  }).then((guessFileInfos) => {
     if (guessFileInfos) {
       if (v) {
         console.log("guessFileInfos: ", guessFileInfos);
@@ -933,9 +931,9 @@ at3.getCompleteInfosFromFile = function(file, v) {
 * @return {String}
 */
 at3.escapeForFilename = (string) => {
-    return _.startCase(_.toLower(_.deburr(string)))
-        .replace(/^\.+/, '')
-        .replace(/\.+$/, '');
+  return _.startCase(_.toLower(_.deburr(string)))
+    .replace(/^\.+/, '')
+    .replace(/\.+$/, '');
 };
 
 /**
@@ -946,7 +944,7 @@ at3.escapeForFilename = (string) => {
 * @param position int Position on the disk
 * @return string
 */
-at3.formatSongFilename = function (title, artist, position) {
+at3.formatSongFilename = (title, artist, position) => {
   let filename = at3.escapeForFilename(artist) + ' - ';
   if (position) {
   if (position < 10) {
@@ -968,7 +966,7 @@ at3.formatSongFilename = function (title, artist, position) {
 * @param artist {string} Artist
 * @return {String} The complete path
 */
-at3.createSubPath = function (baseFolder, subPathFormat, title, artist) {
+at3.createSubPath = (baseFolder, subPathFormat, title, artist) => {
   subPathFormat = subPathFormat.replace(/\{artist\}/g, at3.escapeForFilename(artist));
   subPathFormat = subPathFormat.replace(/\{title\}/g, at3.escapeForFilename(title));
 
@@ -977,7 +975,7 @@ at3.createSubPath = function (baseFolder, subPathFormat, title, artist) {
     p += path.sep;
   }
 
-  let folders = subPathFormat.split(path.sep);
+  const folders = subPathFormat.split(path.sep);
   let currentFolder = baseFolder;
   folders.forEach(f => {
     currentFolder = path.join(currentFolder, f);
@@ -1000,34 +998,34 @@ at3.createSubPath = function (baseFolder, subPathFormat, title, artist) {
 * @param v boolean Verbosity
 * @return Event
 */
-at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, infos) {
+at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => {
   if (v === undefined) {
     v = false;
   }
   if (callback === undefined) {
-    callback = function() {};
+    callback = () => {};
   }
-  if (outputFolder.charAt(outputFolder.length-1) != path.sep) {
+  if (outputFolder.charAt(outputFolder.length-1) !== path.sep) {
     outputFolder += path.sep;
   }
   title = title || '';
 
   const progressEmitter = new EventEmitter();
 
-  var tempFile = (at3.tempFolder || outputFolder) + randomstring.generate(10) + '.mp3';
+  const tempFile = (at3.tempFolder || outputFolder) + randomstring.generate(10) + '.mp3';
 
   // Download and convert file
-  var dl = at3.downloadSingleURL(url, tempFile, '256k');
-  dl.on('download', function(infos) {
+  let dl = at3.downloadSingleURL(url, tempFile, '256k');
+  dl.on('download', (infos) => {
     progressEmitter.emit('download', infos);
   });
-  dl.on('download-end', function() {
+  dl.on('download-end', () => {
     progressEmitter.emit('download-end');
   });
-  dl.on('convert', function(infos) {
+  dl.on('convert', (infos) => {
     progressEmitter.emit('convert', infos, infos);
   });
-  dl.on('error', function(error) {
+  dl.on('error', (error) => {
     callback(null, 'error');
     progressEmitter.emit('error', new Error(error));
   });
@@ -1035,40 +1033,40 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     dl.emit('abort');
   });
 
-  var infosFromString, infosFromFile, infosRequests = [];
+  let infosFromString, infosFromFile, infosRequests = [];
 
   if (infos && infos.deezerId) {
     // If deezer track id is provided, with fetch more information
-    var getMoreInfos = at3.getDeezerTrackInfos(infos.deezerId, v).then(function (inf) {
+    let getMoreInfos = at3.getDeezerTrackInfos(infos.deezerId, v).then((inf) => {
       infosFromString = inf;
-    }).catch(function () {
+    }).catch(() => {
       infosFromString = {
         title: infos.title,
-        artistName: infos.artistName
+        artistName: infos.artistName,
       }
     });
 
     infosRequests.push(getMoreInfos);
   } else if (infos && infos.spotifyId) {
     // If spotify track id is provided, with fetch more information
-    let getMoreInfos = at3.getSpotifyTrackInfos(infos.spotifyId, v).then(function (inf) {
+    let getMoreInfos = at3.getSpotifyTrackInfos(infos.spotifyId, v).then((inf) => {
       infosFromString = inf;
-    }).catch(function () {
+    }).catch(() => {
       infosFromString = {
         title: infos.title,
-        artistName: infos.artistName
+        artistName: infos.artistName,
       }
     });
     infosRequests.push(getMoreInfos);
   } else {
     // Try to find information based on video title
-    var getStringInfos = at3.getCompleteInfosFromURL(url, v).then(function(inf) {
+    let getStringInfos = at3.getCompleteInfosFromURL(url, v).then((inf) => {
       if (title === undefined) {
         title = inf.originalTitle;
       }
       infosFromString = inf;
       progressEmitter.emit('infos', _.clone(infosFromString));
-    }).catch(function() {
+    }).catch(() => {
       // The download must have failed to, and emit an error
     });
 
@@ -1076,11 +1074,11 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
   }
 
   // Try to find information based on MP3 file when dl is finished
-  dl.once('end', function() {
+  dl.once('end', () => {
     progressEmitter.emit('convert-end');
 
     if (!infos || (!infos.deezerId && !infos.spotifyId)) {
-      var getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then(function(inf) {
+      let getFileInfos = at3.getCompleteInfosFromFile(tempFile, v).then((inf) => {
         infosFromFile = inf;
         if (infosFromFile && infosFromFile.title && infosFromFile.artistName) {
           progressEmitter.emit('infos', _.clone(infosFromFile));
@@ -1091,15 +1089,15 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
     }
 
     // [TODO] Improve network issue resistance
-    Promise.all(infosRequests).then(function() {
+    Promise.all(infosRequests).then(() => {
       // ça on peut garder
-      var infos = infosFromString;
+      let infos = infosFromString;
       if (infosFromFile) {
-        var scoreFromFile = Math.min(
+        let scoreFromFile = Math.min(
           levenshtein.get(simpleName(infosFromFile.title + ' ' + infosFromFile.artistName), simpleName(title)),
           levenshtein.get(simpleName(infosFromFile.artistName + ' ' + infosFromFile.title), simpleName(title))
         );
-        var scoreFromString = Math.min(
+        let scoreFromString = Math.min(
           levenshtein.get(simpleName(infosFromString.title + ' ' + infosFromString.artistName), simpleName(title)),
           levenshtein.get(simpleName(infosFromString.artistName + ' ' + infosFromString.title), simpleName(title))
         );
@@ -1120,7 +1118,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
         console.log('Final infos: ', infos);
       }
 
-      at3.findLyrics(infos.title, infos.artistName).then(function(lyrics) {
+      at3.findLyrics(infos.title, infos.artistName).then((lyrics) => {
         return new Promise((resolve, reject) => {
           fs.writeFile(tempFile + '.lyrics', lyrics, (error) => {
             if (error) {
@@ -1130,26 +1128,26 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
             }
           });
         });
-      }).then(function() {
+      }).then(() => {
         infos.lyrics = tempFile + '.lyrics';
-      }).catch(function() {
+      }).catch(() => {
         // no lyrics
-      }).finally(function() {
+      }).finally(() => {
         return at3.tagFile(tempFile, infos);
-      }).then(function() {
-        var finalFile = outputFolder;
+      }).then(() => {
+        let finalFile = outputFolder;
         finalFile += at3.formatSongFilename(infos.title, infos.artistName, infos.position) + '.mp3';
         fs.moveSync(tempFile, finalFile, { overwrite: true });
         if (infos.lyrics) {
           fs.unlinkSync(tempFile + '.lyrics');
         }
-        var finalInfos = {
+        const finalInfos = {
           infos: infos,
-          file: finalFile
+          file: finalFile,
         };
         progressEmitter.emit('end', finalInfos);
         callback(finalInfos);
-      }).catch(err => {
+      }).catch((err) => {
         progressEmitter.emit('error', err);
       });
     });
@@ -1166,7 +1164,7 @@ at3.downloadAndTagSingleURL = function (url, outputFolder, callback, title, v, i
 * @param v boolean Verbosity
 * @return Promise
 */
-at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
+at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
   if (v === undefined) {
     v = false;
   }
@@ -1180,8 +1178,8 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
   * @param title string
   * @return string
   */
-  function improveTitle(title) {
-    var useless = [
+  const improveTitle = (title) => {
+    let useless = [
       'audio only',
       'audio',
       'paroles/lyrics',
@@ -1208,7 +1206,7 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
       'official'
     ];
 
-    _.forEach(useless, function (u) {
+    _.forEach(useless, (u) => {
       title = title.replace(new RegExp('((\\\(|\\\[)?)( ?)' + u + '( ?)((\\\)|\\\])?)', 'gi'), '');
     });
 
@@ -1223,7 +1221,7 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
   * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
   * in seconds
   */
-  function parseTime(time) {
+  const parseTime = (time) => {
     time = time.replace('PT','');
     time = time.replace('S', '');
     if (/M/.test(time)) {
@@ -1234,7 +1232,7 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
     }
   }
 
-  var results = [];
+  const results = [];
 
   // We simply search on YouTube
   let localePart;
@@ -1245,25 +1243,25 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
   }
   return request({
     url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + localePart + '&maxResults=15&q=' + encodeURIComponent(query),
-    json: true
-  }).then(function (body) {
+    json: true,
+  }).then((body) => {
     if (!body.items || body.items.length === 0) {
       return Promise.reject();
     }
 
-    var requests = [];
+    const requests = [];
 
-    _.forEach(body.items, function (s) {
+    _.forEach(body.items, (s) => {
       if (!s.id.videoId) {
         return;
       }
 
-      var req = request({
+      let req = request({
         url: 'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' + API_GOOGLE + '&id=' + s.id.videoId,
-        json: true
-      }).then(function (video) {
+        json: true,
+      }).then((video) => {
         video = video.items[0];
-        var ratio = 1.0;
+        let ratio = 1.0;
         if (!video.statistics) {
           return;
         }
@@ -1273,7 +1271,7 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
         if (ratio === 0) {
           ratio = 1;
         }
-        var realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
+        let realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
 
         results.push({
           id: video.id,
@@ -1282,16 +1280,14 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
           hd: (video.contentDetails.definition == 'hd'),
           duration: parseTime(video.contentDetails.duration),
           views: parseInt(video.statistics.viewCount),
-          realLike: realLike
+          realLike: realLike,
         });
       });
 
       requests.push(req);
     });
     return Promise.all(requests);
-  }).then(function() {
-    return results;
-  });
+  }).then(() => results);
 };
 
 /**
@@ -1299,7 +1295,7 @@ at3.searchOnYoutube = function(query, regionCode, relevanceLanguage, v) {
 * @param videos Array List of videos
 * @param v boolean Verbosity
 */
-at3.findBestVideo = function(song, videos, v) {
+at3.findBestVideo = (song, videos, v) => {
   if (v === undefined) {
     v = false;
   }
@@ -1312,14 +1308,14 @@ at3.findBestVideo = function(song, videos, v) {
   * @param largestViews
   * @return Object
   */
-  function score(song, video, largestRealLike, largestViews) {
+  const score = (song, video, largestRealLike, largestViews) => {
     // weight of each argument
     let weights = {
       title: 30,
       hd: 0.3,
       duration: 20,
       views: 10,
-      realLike: 15
+      realLike: 15,
     };
 
     let duration = song.duration || video.duration;
@@ -1334,26 +1330,26 @@ at3.findBestVideo = function(song, videos, v) {
     let songTitlea = songTitle.split('');
     let songArtista = songArtist.split('');
 
-    let videoSongTitle = lcs(videoTitlea, songTitlea);
+    const videoSongTitle = lcs(videoTitlea, songTitlea);
     if (videoSongTitle.length > 0 && videoSongTitle.startString2 === 0 && videoTitle[videoSongTitle.startString1 + videoSongTitle.length - 1] == ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
       videoTitle = videoTitle.substring(0, videoSongTitle.startString1) + ' ' + videoTitle.substring(videoSongTitle.startString1 + videoSongTitle.length);
       videoTitlea = videoTitle.split('');
     }
-    let videoSongArtist = lcs(videoTitlea, songArtista);
+    const videoSongArtist = lcs(videoTitlea, songArtista);
     if (videoSongArtist.length > 0 && videoSongArtist.startString2 === 0 && videoTitle[videoSongArtist.startString1 + videoSongArtist.length - 1] == ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
       videoTitle = videoTitle.substring(0, videoSongArtist.startString1) + videoTitle.substring(videoSongArtist.startString1 + videoSongArtist.length);
     }
 
 
     videoTitle = _.lowerCase(videoTitle);
-    let sTitle = videoTitle.length + (songTitle.length - videoSongTitle.length) + (songArtist.length - videoSongArtist.length);
+    const sTitle = videoTitle.length + (songTitle.length - videoSongTitle.length) + (songArtist.length - videoSongArtist.length);
 
-    let videoScore = {
-      title: sTitle*weights.title,
-      hd: video.hd*weights.hd,
-      duration: Math.sqrt(Math.abs(video.duration - duration))*weights.duration,
-      views: (video.views/largestViews)*weights.views,
-      realLike: (video.realLike/largestRealLike)*weights.realLike || -50 // video.realLike is NaN when the likes has been deactivated, which is a very bad sign
+    const videoScore = {
+      title: sTitle * weights.title,
+      hd: video.hd * weights.hd,
+      duration: Math.sqrt(Math.abs(video.duration - duration)) * weights.duration,
+      views: (video.views/largestViews) * weights.views,
+      realLike: (video.realLike/largestRealLike) * weights.realLike || -50, // video.realLike is NaN when the likes has been deactivated, which is a very bad sign
     };
     video.videoScore = videoScore;
 
@@ -1363,20 +1359,20 @@ at3.findBestVideo = function(song, videos, v) {
     return preVideoScore;
   }
 
-  var largestRealLike = _.reduce(videos, function (v, r) {
+  const largestRealLike = _.reduce(videos, (v, r) => {
     if (r.realLike > v) {
       return r.realLike;
     }
     return v;
   }, 0);
-  var largestViews = _.reduce(videos, function (v, r) {
+  const largestViews = _.reduce(videos, (v, r) => {
     if (r.views > v) {
       return r.views;
     }
     return v;
   }, 0);
 
-  _.forEach(videos, function(r) {
+  _.forEach(videos, (r) => {
     r.score = score(song, r, largestRealLike, largestViews);
   });
 
@@ -1390,13 +1386,13 @@ at3.findBestVideo = function(song, videos, v) {
 * @param v boolean Verbosity
 * @return Promise
 */
-at3.findVideoForSong = function(song, v) {
+at3.findVideoForSong = (song, v) => {
   if (v === undefined) {
     v = false;
   }
 
   let query = song.title + ' - ' + song.artistName;
-  return at3.searchOnYoutube(query, at3.regionCode, at3.relevanceLanguage, v).then(youtubeResults => {
+  return at3.searchOnYoutube(query, at3.regionCode, at3.relevanceLanguage, v).then((youtubeResults) => {
     return at3.findBestVideo(song, youtubeResults, v);
   });
 };
@@ -1408,19 +1404,19 @@ at3.findVideoForSong = function(song, v) {
 * @param v boolean Verbosity
 * @return Promise
 */
-at3.findVideo = function(query, v) {
+at3.findVideo = (query, v) => {
   if (v === undefined) {
     v = false;
   }
 
   // We try to find the song
-  return at3.guessTrackFromString(query, true, false, v).then(guessStringInfos => {
+  return at3.guessTrackFromString(query, true, false, v).then((guessStringInfos) => {
     if (guessStringInfos.title && guessStringInfos.artistName) {
       return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, true, v);
     } else {
       return Promise.reject({error: "No song corresponds to your query"});
     }
-  }).then(song => {
+  }).then((song) => {
     return at3.findVideoForSong(song, v);
   });
 };
@@ -1434,36 +1430,36 @@ at3.findVideo = function(query, v) {
 * @param v boolean Verbosity
 * @return Event
 */
-at3.findAndDownload = function(query, outputFolder, callback, v) {
+at3.findAndDownload = (query, outputFolder, callback, v) => {
   if (v === undefined) {
     v = false;
   }
   const progressEmitter = new EventEmitter();
 
-  at3.findVideo(query).then(function(results) {
+  at3.findVideo(query).then((results) => {
     if (results.length === 0) {
       progressEmitter.emit('error', new Error("Cannot find any video matching"));
       return callback(null, "Cannot find any video matching");
     }
-    var i = 0;
+    let i = 0;
     progressEmitter.emit('search-end');
-    var dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
-    dl.on('download', function(infos) {
+    let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
+    dl.on('download', (infos) => {
       progressEmitter.emit('download', infos);
     });
-    dl.on('download-end', function() {
+    dl.on('download-end', () => {
       progressEmitter.emit('download-end');
     });
-    dl.on('convert', function(infos) {
+    dl.on('convert', (infos) => {
       progressEmitter.emit('convert', infos);
     });
-    dl.on('convert-end', function() {
+    dl.on('convert-end', () => {
       progressEmitter.emit('convert-end');
     });
-    dl.on('infos', function(infos) {
+    dl.on('infos', (infos) => {
       progressEmitter.emit('infos', infos);
     });
-    dl.on('error', function(error) {
+    dl.on('error', (error) => {
       // [TODO]: try to download the next video, in case of youtube-dl error only
       // if (i < results.length) {
       //     dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
@@ -1471,7 +1467,7 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
         progressEmitter.emit('error', new Error(error));
       // }
     });
-  }).catch(function() {
+  }).catch(() => {
     progressEmitter.emit('error', new Error("Cannot find any video matching"));
     return callback(null, "Cannot find any video matching");
   });
@@ -1487,14 +1483,14 @@ at3.findAndDownload = function(query, outputFolder, callback, v) {
 * @param v boolean Verbosity
 * @return Event
 */
-at3.downloadTrack = function(track, outputFolder, callback, v) {
+at3.downloadTrack = (track, outputFolder, callback, v) => {
   if (v === undefined) {
     v = false;
   }
   const progressEmitter = new EventEmitter();
-  var aborted = false;
+  let aborted = false;
 
-  at3.findVideoForSong(track, v).then(function(results) {
+  at3.findVideoForSong(track, v).then((results) => {
     if (aborted) {
       return;
     }
@@ -1514,25 +1510,25 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
       }
       let aborted = false;
       let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
-      dl.on('download', function(infos) {
+      dl.on('download', (infos) => {
         progressEmitter.emit('download', infos);
       });
-      dl.on('download-end', function() {
+      dl.on('download-end', () => {
         progressEmitter.emit('download-end');
       });
-      dl.on('convert', function(infos) {
+      dl.on('convert', (infos) => {
         progressEmitter.emit('convert', infos);
       });
-      dl.on('convert-end', function() {
+      dl.on('convert-end', () => {
         progressEmitter.emit('convert-end');
       });
-      dl.on('infos', function(infos) {
+      dl.on('infos', (infos) => {
         progressEmitter.emit('infos', infos);
       });
       dl.on('end', finalInfos => {
         progressEmitter.emit('end', finalInfos);
       });
-      dl.on('error', function(error) {
+      dl.on('error', (_error) => {
         i += 1;
         aborted = true;
         dlNext();
@@ -1544,7 +1540,7 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
       });
     };
     dlNext();
-  }).catch(function() {
+  }).catch(() => {
     progressEmitter.emit('error', new Error("Cannot find any video matching"));
     return callback(null, "Cannot find any video matching");
   });
@@ -1561,17 +1557,17 @@ at3.downloadTrack = function(track, outputFolder, callback, v) {
 * @param url
 * @return Promise(object)
 */
-at3.getPlaylistURLsInfos = function(url) {
-  var type = at3.guessURLType(url);
+at3.getPlaylistURLsInfos = (url) => {
+  let type = at3.guessURLType(url);
 
   if (type == 'youtube') {
-    var playlistId = url.match(/list=([0-9a-zA-Z_-]+)/);
+    let playlistId = url.match(/list=([0-9a-zA-Z_-]+)/);
     playlistId = playlistId[1];
     let playlistInfos = {};
     let playlistq = request({
       url: 'https://www.googleapis.com/youtube/v3/playlists?part=snippet&key=' + API_GOOGLE + '&id=' + playlistId,
       json: true
-    }).then(function (playlistDetails) {
+    }).then((playlistDetails) => {
       let snippet = playlistDetails.items[0].snippet;
       playlistInfos.title = snippet.title;
       playlistInfos.artistName = snippet.channelTitle;
@@ -1580,16 +1576,16 @@ at3.getPlaylistURLsInfos = function(url) {
     let playlistItemsq = request({
       url: 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=' + API_GOOGLE + '&maxResults=50&playlistId=' + playlistId,
       json: true
-    }).then(function (playlistDetails) {
+    }).then((playlistDetails) => {
       let playlistItems = [];
 
-      _.forEach(playlistDetails.items, function (item) {
+      _.forEach(playlistDetails.items, (item) => {
         if (!item.snippet || !item.snippet.thumbnails) {
           // Video unavailable, like cbixLt0WBQs
           return;
         }
-        var highestUrl;
-        _.forEach(['maxres', 'standart', 'high', 'medium', 'default'], function (res) {
+        let highestUrl;
+        _.forEach(['maxres', 'standart', 'high', 'medium', 'default'], (res) => {
           if (!highestUrl && item.snippet.thumbnails[res]) {
             highestUrl = item.snippet.thumbnails[res].url;
           }
@@ -1597,7 +1593,7 @@ at3.getPlaylistURLsInfos = function(url) {
         playlistItems.push({
           url: 'http://youtube.com/watch?v=' + item.snippet.resourceId.videoId,
           title: item.snippet.title,
-          cover: highestUrl
+          cover: highestUrl,
         });
       });
 
@@ -1609,21 +1605,21 @@ at3.getPlaylistURLsInfos = function(url) {
   } else if (type == 'soundcloud') {
     return request({
       url: 'http://api.soundcloud.com/resolve?client_id=' + API_SOUNDCLOUD + '&url=' + url,
-      json: true
-    }).then(function (playlistDetails) {
+      json: true,
+    }).then((playlistDetails) => {
       let playlistInfos = {
         title: playlistDetails.title,
         artistName: playlistDetails.user.username,
-        cover: playlistDetails.artwork_url
+        cover: playlistDetails.artwork_url,
       };
       let items = [];
 
-      _.forEach(playlistDetails.tracks, function (track) {
+      _.forEach(playlistDetails.tracks, (track) => {
         items.push({
           url: track.permalink_url,
           title: track.title,
           cover: track.artwork_url,
-          artistName: track.user.username
+          artistName: track.user.username,
         });
       });
 
@@ -1639,43 +1635,43 @@ at3.getPlaylistURLsInfos = function(url) {
 * @param url
 * @return Promise(object)
 */
-at3.getPlaylistTitlesInfos = function(url) {
+at3.getPlaylistTitlesInfos = (url) => {
   // Deezer Playlist
   // Deezer Album
   // Deezer Loved Tracks [TODO]
   // Spotify playlist
   // Spotify Album
-  var type = at3.guessURLType(url);
+  const type = at3.guessURLType(url);
 
-  var regDeezerPlaylist = /playlist\/([0-9]+)/;
-  var regDeezerAlbum = /album\/([0-9]+)/;
+  const regDeezerPlaylist = /playlist\/([0-9]+)/;
+  const regDeezerAlbum = /album\/([0-9]+)/;
 
-  var regSpotifyPlaylist = /user\/([0-9a-zA-Z_.-]+)\/playlist\/([0-9a-zA-Z]+)/;
-  var regSpotifyAlbum = /album\/([0-9a-zA-Z]+)/;
+  const regSpotifyPlaylist = /user\/([0-9a-zA-Z_.-]+)\/playlist\/([0-9a-zA-Z]+)/;
+  const regSpotifyAlbum = /album\/([0-9a-zA-Z]+)/;
 
   if (type == 'deezer') {
     // Deezer Playlist
     if (regDeezerPlaylist.test(url)) {
-      var playlistId = url.match(regDeezerPlaylist)[1];
+      const playlistId = url.match(regDeezerPlaylist)[1];
 
       return request({
         url: 'https://api.deezer.com/playlist/' + playlistId,
-        json: true
-      }).then(function (playlistDetails) {
-        let playlist = {};
-        let items = [];
+        json: true,
+      }).then((playlistDetails) => {
+        const playlist = {};
+        const items = [];
 
         playlist.title = playlistDetails.title;
         playlist.artistName = playlistDetails.creator.name;
         playlist.cover = playlistDetails.picture_big;
 
-        _.forEach(playlistDetails.tracks.data, function (track) {
+        _.forEach(playlistDetails.tracks.data, (track) => {
           items.push({
             title: track.title,
             artistName: track.artist.name,
             deezerId: track.id,
             album: track.album.title,
-            cover: track.album.cover
+            cover: track.album.cover,
           });
         });
 
@@ -1689,27 +1685,27 @@ at3.getPlaylistTitlesInfos = function(url) {
 
       return request({
         url: 'https://api.deezer.com/album/' + albumId,
-        json: true
-      }).then(function (ralbumInfos) {
+        json: true,
+      }).then((ralbumInfos) => {
         albumInfos.cover = ralbumInfos.cover_big;
         albumInfos.title = ralbumInfos.title;
         albumInfos.artistName = ralbumInfos.artist.name;
 
         return request({
           url: 'https://api.deezer.com/album/' + albumId + '/tracks',
-          json: true
+          json: true,
         });
-      }).then(function (albumTracks) {
+      }).then((albumTracks) => {
         let items = [];
 
-        _.forEach(albumTracks.data, function (track) {
+        _.forEach(albumTracks.data, (track) => {
           items.push({
             title: track.title,
             artistName: track.artist.name,
             deezerId: track.id,
             album: albumInfos.title,
             cover: albumInfos.cover,
-            duration: track.duration
+            duration: track.duration,
           });
         });
 
@@ -1721,12 +1717,12 @@ at3.getPlaylistTitlesInfos = function(url) {
   } else if (type == 'spotify') {
     // Spotify Playlist
     if (regSpotifyPlaylist.test(url)) {
-      let userId = url.match(regSpotifyPlaylist)[1];
-      let playlistId = url.match(regSpotifyPlaylist)[2];
+      const userId = url.match(regSpotifyPlaylist)[1];
+      const playlistId = url.match(regSpotifyPlaylist)[2];
 
       return at3.requestSpotify('https://api.spotify.com/v1/users/' + userId + '/playlists/' + playlistId).then((playlistDetails) => {
-        let playlist = {};
-        let items = [];
+        const playlist = {};
+        const items = [];
 
         playlist.title = playlistDetails.name;
         playlist.artistName = userId;
@@ -1735,7 +1731,7 @@ at3.getPlaylistTitlesInfos = function(url) {
         playlist.items = items;
 
         const processSpotifyPage = (page) => {
-          page.items.forEach(t => {
+          page.items.forEach((t) => {
             let track = t.track;
             items.push({
               title: track.name,
@@ -1743,7 +1739,7 @@ at3.getPlaylistTitlesInfos = function(url) {
               spotifyId: track.id,
               album: track.album.name,
               cover: track.album.images[0] ? track.album.images[0].url : undefined,
-              duration: Math.ceil(track.duration_ms/1000)
+              duration: Math.ceil(track.duration_ms / 1000),
             });
           });
 
@@ -1760,21 +1756,21 @@ at3.getPlaylistTitlesInfos = function(url) {
       let albumId = url.match(regSpotifyAlbum)[1];
       let albumInfos = {};
 
-      return at3.requestSpotify('https://api.spotify.com/v1/albums/' + albumId).then(ralbumInfos => {
+      return at3.requestSpotify('https://api.spotify.com/v1/albums/' + albumId).then((ralbumInfos) => {
         albumInfos.title = ralbumInfos.name;
         albumInfos.artistName = ralbumInfos.artists[0].name;
         albumInfos.cover = ralbumInfos.images[0].url;
 
         let items = [];
 
-        ralbumInfos.tracks.items.forEach(track => {
+        ralbumInfos.tracks.items.forEach((track) => {
           items.push({
             title: track.name,
             artistName: track.artists[0].name,
             spotifyId: track.id,
             album: albumInfos.title,
             cover: albumInfos.cover,
-            duration: Math.ceil(track.duration_ms/1000)
+            duration: Math.ceil(track.duration_ms / 1000),
           });
         });
 
@@ -1795,7 +1791,7 @@ at3.getPlaylistTitlesInfos = function(url) {
 * @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
 * @return {Event}
 */
-at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultaneous, subPathFormat) {
+at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, subPathFormat) => {
   if (maxSimultaneous === undefined) {
     maxSimultaneous = 1;
   }
@@ -1804,11 +1800,11 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
   }
 
   const emitter = new EventEmitter();
-  var running = 0;
-  var lastIndex = 0;
-  var aborted = false;
+  let running = 0;
+  let lastIndex = 0;
+  let aborted = false;
 
-  at3.getPlaylistURLsInfos(url).then(function (playlistInfos) {
+  at3.getPlaylistURLsInfos(url).then((playlistInfos) => {
     if (aborted) {
       return;
     }
@@ -1820,7 +1816,7 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
     downloadNext(playlistInfos.items, 0);
   });
 
-  function downloadNext(urls, currentIndex) {
+  const downloadNext = (urls, currentIndex) => {
     if (aborted) {
       return;
     }
@@ -1836,13 +1832,13 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
       lastIndex = currentIndex;
     }
 
-    var currentUrl = urls[currentIndex];
+    let currentUrl = urls[currentIndex];
 
     currentUrl.progress = {};
 
     emitter.emit('begin-url', currentIndex);
 
-    var dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, function(infos, error) {
+    let dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, (infos, _error) => {
       if (infos) {
         currentUrl.file = infos.file;
         currentUrl.infos = infos.infos;
@@ -1861,28 +1857,28 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
       dl.emit('abort');
     });
 
-    dl.on('download', function(infos) {
+    dl.on('download', (infos) => {
       currentUrl.progress.download = infos;
       emitter.emit('download', currentIndex);
     });
-    dl.on('download-end', function() {
+    dl.on('download-end', () => {
       emitter.emit('download-end', currentIndex);
       if (running < maxSimultaneous) {
         downloadNext(urls, lastIndex+1);
       }
     });
-    dl.on('convert', function(infos) {
+    dl.on('convert', (infos) => {
       currentUrl.progress.convert = infos;
       emitter.emit('convert', currentIndex);
     });
-    dl.on('convert-end', function() {
+    dl.on('convert-end', () => {
       emitter.emit('convert-end', currentIndex);
     });
-    dl.on('infos', function(infos) {
+    dl.on('infos', (infos) => {
       currentUrl.infos = infos;
       emitter.emit('infos', currentIndex);
     });
-    dl.on('error', function() {
+    dl.on('error', () => {
       emitter.emit('error', new Error(currentIndex));
       if (running < maxSimultaneous) {
         downloadNext(urls, lastIndex+1);
@@ -1906,7 +1902,7 @@ at3.downloadPlaylistWithURLs = function(url, outputFolder, callback, maxSimultan
 * @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
 * @return {Event}
 */
-at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimultaneous, subPathFormat) {
+at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, subPathFormat) => {
   if (maxSimultaneous === undefined) {
     maxSimultaneous = 1;
   }
@@ -1915,11 +1911,11 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
   }
 
   const emitter = new EventEmitter();
-  var running = 0;
-  var lastIndex = 0;
-  var aborted = false;
+  let running = 0;
+  let lastIndex = 0;
+  let aborted = false;
 
-  at3.getPlaylistTitlesInfos(url).then(function (playlistInfos) {
+  at3.getPlaylistTitlesInfos(url).then((playlistInfos) => {
     if (aborted) {
       return;
     }
@@ -1931,7 +1927,7 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
     downloadNext(playlistInfos.items, 0);
   });
 
-  function downloadNext(urls, currentIndex) {
+  const downloadNext = (urls, currentIndex) => {
     if (aborted) {
       return;
     }
@@ -1947,19 +1943,19 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
       lastIndex = currentIndex;
     }
 
-    var currentTrack = urls[currentIndex];
+    let currentTrack = urls[currentIndex];
 
     currentTrack.progress = {};
 
     emitter.emit('begin-url', currentIndex);
 
-    at3.findVideoForSong(currentTrack).then(function (videos) {
+    at3.findVideoForSong(currentTrack).then((videos) => {
       if (aborted) {
         return;
       }
       emitter.emit('search-end', currentIndex);
 
-      function downloadFinished(infos, error) {
+      const downloadFinished = (infos, error) => {
         if (!infos || error) {
           return;
         }
@@ -1975,31 +1971,30 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
       }
 
       let i = 0;
-      handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
 
-      function handleDl(dl) {
-        dl.on('download', function(infos) {
+      const handleDl = (dl) => {
+        dl.on('download', (infos) => {
           currentTrack.progress.download = infos;
           emitter.emit('download', currentIndex);
         });
-        dl.on('download-end', function() {
+        dl.on('download-end', () => {
           emitter.emit('download-end', currentIndex);
           if (running < maxSimultaneous) {
             downloadNext(urls, lastIndex+1);
           }
         });
-        dl.on('convert', function(infos) {
+        dl.on('convert', (infos) => {
           currentTrack.progress.convert = infos;
           emitter.emit('convert', currentIndex);
         });
-        dl.on('convert-end', function() {
+        dl.on('convert-end', () => {
           emitter.emit('convert-end', currentIndex);
         });
-        dl.on('infos', function(infos) {
+        dl.on('infos', (infos) => {
           currentTrack.infos = infos;
           emitter.emit('infos', currentIndex);
         });
-        dl.on('error', function() {
+        dl.on('error', () => {
           if (i < videos.length) {
             i++;
             handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
@@ -2014,7 +2009,9 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
           aborted = true;
           dl.emit('abort');
         });
-      }
+      };
+
+      handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
     });
   }
 
@@ -2033,10 +2030,10 @@ at3.downloadPlaylistWithTitles = function(url, outputFolder, callback, maxSimult
 * @param maxSimultaneous {number} Maximum number of simultaneous track processing
 * @return {Event}
 */
-at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous, subPathFormat) {
-  var type = at3.guessURLType(url);
-  var sitesTitles = ['deezer', 'spotify'];
-  var sitesURLs = ['youtube', 'soundcloud'];
+at3.downloadPlaylist = (url, outputFolder, callback, maxSimultaneous, subPathFormat) => {
+  const type = at3.guessURLType(url);
+  const sitesTitles = ['deezer', 'spotify'];
+  const sitesURLs = ['youtube', 'soundcloud'];
 
   if (sitesTitles.indexOf(type) >= 0) {
     return at3.downloadPlaylistWithTitles(url, outputFolder, callback, maxSimultaneous, subPathFormat);
@@ -2056,31 +2053,31 @@ at3.downloadPlaylist = function(url, outputFolder, callback, maxSimultaneous, su
 * @param v boolean Verbose
 * @return Event
 */
-at3.downloadTrackURL = function(url, outputFolder, callback, v) {
+at3.downloadTrackURL = (url, outputFolder, callback, v) => {
   if (v === undefined) {
     v = false;
   }
-  var type = at3.guessURLType(url);
+  const type = at3.guessURLType(url);
   const emitter = new EventEmitter();
 
   if (type === 'spotify') {
-    let trackId = url.match(/\/track\/([0-9a-zA-Z]+)/)[1];
-    at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then(trackInfos => {
-      let track = {
+    const trackId = url.match(/\/track\/([0-9a-zA-Z]+)/)[1];
+    at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then((trackInfos) => {
+      const track = {
         title: trackInfos.name,
         artistName: trackInfos.artists[0].name,
         duration: Math.ceil(trackInfos.duration_ms/1000),
         spotifyId: trackId,
-        cover: trackInfos.album.images[0].url
+        cover: trackInfos.album.images[0].url,
       };
-      let e = at3.downloadTrack(track, outputFolder, callback, v);
+      const e = at3.downloadTrack(track, outputFolder, callback, v);
 
       at3.forwardEvents(e, emitter);
     });
   } else if (type === 'deezer') {
-    let trackId = url.match(/\/track\/([0-9]+)/)[1];
+    const trackId = url.match(/\/track\/([0-9]+)/)[1];
     at3.getDeezerTrackInfos(trackId, v).then(trackInfos => {
-      let e = at3.downloadTrack(trackInfos, outputFolder, callback, v);
+      const e = at3.downloadTrack(trackInfos, outputFolder, callback, v);
 
       at3.forwardEvents(e, emitter);
     });
@@ -2096,10 +2093,10 @@ at3.downloadTrackURL = function(url, outputFolder, callback, v) {
  * @param e2 Event the destination
  * @return e2
  */
-at3.forwardEvents = function(e1, e2) {
+at3.forwardEvents = (e1, e2) => {
   let events = ['download', 'download-end', 'convert', 'convert-end', 'infos', 'error', 'playlist-infos', 'begin-url', 'end-url', 'end', 'search-end'];
-  events.forEach(e => {
-    e1.on(e, data => {
+  events.forEach((e) => {
+    e1.on((e, data) => {
       e2.emit(e, data);
     });
   });
@@ -2115,22 +2112,22 @@ at3.forwardEvents = function(e1, e2) {
 * @param limit number
 * @return Promise<array<trackInfos>> Array of potential songs
 */
-at3.suggestedSongs = function(query, limit) {
+at3.suggestedSongs = (query, limit) => {
   if (!limit) {
     limit = 5;
   }
 
   return request({
     uri: 'https://api.deezer.com/search?limit=' + limit + '&q=' + encodeURIComponent(query),
-    json: true
-  }).then(results => {
-    return _.map(results.data, r => {
+    json: true,
+  }).then((results) => {
+    return _.map(results.data, (r) => {
       return {
-      title: r.title,
-      artistName: r.artist.name,
-      duration: r.duration,
-      cover: r.album.cover_medium,
-      deezerId: r.id
+        title: r.title,
+        artistName: r.artist.name,
+        duration: r.duration,
+        cover: r.album.cover_medium,
+        deezerId: r.id,
       };
     });
   });
@@ -2142,23 +2139,23 @@ at3.suggestedSongs = function(query, limit) {
 * @param limit number
 * @return Promise<array<Object>> Array of potential albums
 */
-at3.suggestedAlbums = function(query, limit) {
+at3.suggestedAlbums = (query, limit) => {
   if (!limit) {
     limit = 5;
   }
 
   return request({
     uri: 'https://api.deezer.com/search/album?limit=' + limit + '&q=' + encodeURIComponent(query),
-    json: true
-  }).then(results => {
-    return _.map(results.data, r => {
+    json: true,
+  }).then((results) => {
+    return _.map(results.data, (r) => {
       return {
-      title: r.title,
-      artistName: r.artist.name,
-      cover: r.cover_medium,
-      deezerId: r.id,
-      link: r.link,
-      nbTracks: r.nb_tracks
+        title: r.title,
+        artistName: r.artist.name,
+        cover: r.cover_medium,
+        deezerId: r.id,
+        link: r.link,
+        nbTracks: r.nb_tracks,
       };
     });
   });
@@ -2169,11 +2166,11 @@ at3.suggestedAlbums = function(query, limit) {
 * @param query string
 * @return string: text, single-url, playlist-url, track-url, not-supported
 */
-at3.typeOfQuery = function(query) {
+at3.typeOfQuery = (query) => {
   if (!at3.isURL(query)) {
     return 'text';
   }
-  var type = at3.guessURLType(query);
+  const type = at3.guessURLType(query);
   if (!type) {
     return 'not-supported';
   }
@@ -2206,7 +2203,7 @@ at3.typeOfQuery = function(query) {
 * @param url
 * @return string
 */
-at3.guessURLType = function(url) {
+at3.guessURLType = (url) => {
   if (/^(https?:\/\/)?((www|m)\.)?((youtube\.([a-z]{2,4}))|(youtu\.be))/.test(url)) {
     return 'youtube';
   } else if (/^(https?:\/\/)?(((www)|(m))\.)?(soundcloud\.([a-z]{2,4}))/.test(url)) {
@@ -2218,11 +2215,11 @@ at3.guessURLType = function(url) {
   }
 };
 
-function imatch(textSearched, text) {
+const imatch = (textSearched, text) => {
   // [TODO] Improve this function (use .test and espace special caracters + use it everywhere else)
   return text.match(new RegExp(textSearched, 'gi'));
-}
-function vsimpleName(text, exact) {
+};
+const vsimpleName = (text, exact) => {
   if (exact === undefined) {
     exact = false;
   }
@@ -2233,19 +2230,19 @@ function vsimpleName(text, exact) {
   text = text.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
   text = text.replace(/[^a-zA-Z0-9]/ig, '');
   return text;
-}
-function delArtist(artist, text, exact) {
+};
+const delArtist = (artist, text, exact) => {
   if (exact === undefined) {
     exact = false;
   }
-  if(vsimpleName(artist).length <= 2) { // Artist with a very short name (Mathieu Chedid - M)
+  if (vsimpleName(artist).length <= 2) { // Artist with a very short name (Mathieu Chedid - M)
     return vsimpleName(text, exact);
   } else {
     // [TODO] Improve, escape regex special caracters in vsimpleName(artist)
     return vsimpleName(text, exact).replace(new RegExp(vsimpleName(artist),'ig'), '');
   }
-}
-function simpleName(text) {
+};
+const simpleName = (text) => {
   return text.replace(/\(.+\)/g, '');
 }
 

@@ -16,28 +16,28 @@ npm install alltomp3
 ```js
 const alltomp3 = require('alltomp3');
 
-var dl = alltomp3.findAndDownload("imagine dragons on top of the world", "./", function (infos) {
-    console.log("It's finished: ", infos);
+const dl = alltomp3.findAndDownload("imagine dragons on top of the world", "./", (infos) => {
+  console.log("It's finished: ", infos);
 });
 
 // {
-//     infos: {
-//         title: 'On Top Of The World',
-//         artistName: 'Imagine Dragons',
-//         deezerId: 63510362,
-//         itunesId: 555694746,
-//         position: 5,
-//         duration: 192,
-//         deezerAlbum: 6240279,
-//         discNumber: 1,
-//         album: 'Night Visions',
-//         releaseDate: '2012-01-01',
-//         nbTracks: 13,
-//         genreId: 132,
-//         cover: 'http://e-cdn-images.deezer.com/images/cover/7e8314f4280cffde363547a495a260bc/600x600-000000-80-0-0.jpg',
-//         genre: 'Pop'
-//     },
-//     file: './Imagine Dragons - On Top Of The World.mp3'
+//   infos: {
+//     title: 'On Top Of The World',
+//     artistName: 'Imagine Dragons',
+//     deezerId: 63510362,
+//     itunesId: 555694746,
+//     position: 5,
+//     duration: 192,
+//     deezerAlbum: 6240279,
+//     discNumber: 1,
+//     album: 'Night Visions',
+//     releaseDate: '2012-01-01',
+//     nbTracks: 13,
+//     genreId: 132,
+//     cover: 'http://e-cdn-images.deezer.com/images/cover/7e8314f4280cffde363547a495a260bc/600x600-000000-80-0-0.jpg',
+//     genre: 'Pop'
+//   },
+//   file: './Imagine Dragons - On Top Of The World.mp3'
 // }
 ```
 
@@ -114,30 +114,30 @@ This event is emitted every time new information about the track are found, with
 ```js
 const alltomp3 = require('alltomp3');
 
-var dl = alltomp3.findAndDownload("imagine dragons on top of the world", function (infos) {
-    console.log("It's finished: ", infos);
+const dl = alltomp3.findAndDownload("imagine dragons on top of the world", (infos) => {
+  console.log("It's finished: ", infos);
 });
-dl.on('search-end', function() {
-    console.log('Search end');
+dl.on('search-end', () => {
+  console.log('Search end');
 });
-dl.on('download', function(infos) {
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(1);
-    process.stdout.write(infos.progress + '%');
+dl.on('download', (infos) => {
+  process.stdout.cursorTo(0);
+  process.stdout.clearLine(1);
+  process.stdout.write(infos.progress + '%');
 });
-dl.on('download-end', function() {
-    console.log('', 'Download end');
+dl.on('download-end', () => {
+  console.log('', 'Download end');
 });
-dl.on('convert', function(infos) {
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(1);
-    process.stdout.write(infos.progress + '%');
+dl.on('convert', (infos) => {
+  process.stdout.cursorTo(0);
+  process.stdout.clearLine(1);
+  process.stdout.write(infos.progress + '%');
 });
-dl.on('convert-end', function() {
-    console.log('', 'Convert end');
+dl.on('convert-end', () => {
+  console.log('', 'Convert end');
 });
-dl.on('infos', function(infos) {
-    console.log('New infos received: ', infos);
+dl.on('infos', (infos) => {
+  console.log('New infos received: ', infos);
 });
 ```
 
@@ -156,8 +156,8 @@ Returns a **Promise** which is resolved with an ordered array of objects contain
 ```js
 const alltomp3 = require('alltomp3');
 
-alltomp3.findVideo("imagine dragons on top of the world").then(function(results) {
-    console.log(results);
+alltomp3.findVideo("imagine dragons on top of the world").then((results) => {
+  console.log(results);
 });
 
 // [ { id: 'g8PrTzLaLHc',
@@ -195,9 +195,9 @@ Returns a **Promise** with an object containing:
 ```js
 const alltomp3 = require('alltomp3');
 
-function l(infos) {
-    console.log(infos);
-}
+const l = (infos) => {
+  console.log(infos);
+};
 
 alltomp3.guessTrackFromString('Imagine Dragons - On Top of the World - Lyrics').then(l);
 alltomp3.guessTrackFromString('C2C - Happy Ft. D.Martin').then(l);
@@ -221,10 +221,10 @@ Returns a **Promise** with a `string`.
 ```js
 const alltomp3 = require('alltomp3');
 
-alltomp3.findLyrics('Radioactive', 'Imagine Dragons').then(function (lyrics) {
-    console.log(lyrics);
-}).catch(function() {
-    console.log('No lyrics');
+alltomp3.findLyrics('Radioactive', 'Imagine Dragons').then((lyrics) => {
+  console.log(lyrics);
+}).catch(() => {
+  console.log('No lyrics');
 });
 ```
 

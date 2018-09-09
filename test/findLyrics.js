@@ -11,11 +11,11 @@ const _ = require('lodash');
  * and can sometimes be wrong...
 */
 
-describe('findLyrics', function() {
+describe('findLyrics', () => {
 
-  for (var i = 0; i < 5; i++) {
-    it('should find lyrics for Imagine Dragons - On Top of the World', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('On Top of the World', 'Imagine Dragons').then(function (lyrics) {
+  for (let i = 0; i < 5; i += 1) {
+    it('should find lyrics for Imagine Dragons - On Top of the World', (done) => {
+      alltomp3.findLyrics('On Top of the World', 'Imagine Dragons').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/^if-you-love-somebody-better-tell-them-while-theyre-here/);
@@ -23,8 +23,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for Pauline Croze - T\'es Beau', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('T\'es beau', 'Pauline Croze').then(function (lyrics) {
+    it('should find lyrics for Pauline Croze - T\'es Beau', (done) => {
+      alltomp3.findLyrics('T\'es beau', 'Pauline Croze').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/tes-beau-parce-que-tes-courageux-de-regarder-dans-le-fond-des-yeux-celui-qui-te-defie-detre-heureux/);
@@ -32,8 +32,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for M - Mama Sam', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Mama Sam', 'M').then(function (lyrics) {
+    it('should find lyrics for M - Mama Sam', (done) => {
+      alltomp3.findLyrics('Mama Sam', 'M').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/^quand-je-te-revois-mama-sam-je-retrouve-les-vraies-valeurs/);
@@ -41,8 +41,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for Coldplay - Viva la Vida', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Viva la Vida', 'Coldplay').then(function (lyrics) {
+    it('should find lyrics for Coldplay - Viva la Vida', (done) => {
+      alltomp3.findLyrics('Viva la Vida', 'Coldplay').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/^i-used-to-rule-the-world-seas-would-rise-when-i-gave-the-word/);
@@ -50,8 +50,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for HYPHEN HYPHEN - Cause I Got A Chance', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Cause I Got A Chance', 'HYPHEN HYPHEN').then(function (lyrics) {
+    it('should find lyrics for HYPHEN HYPHEN - Cause I Got A Chance', (done) => {
+      alltomp3.findLyrics('Cause I Got A Chance', 'HYPHEN HYPHEN').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/^tonight-i-dont-wanna-cry-tonight-i-want-you-to-dance-with-me-tonight/);
@@ -59,8 +59,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for Calvin Harris - The Rain', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('The Rain', 'Calvin Harris').then(function (lyrics) {
+    it('should find lyrics for Calvin Harris - The Rain', (done) => {
+      alltomp3.findLyrics('The Rain', 'Calvin Harris').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/^shes-the-type-of-girl-that-makes-you-feel-better/);
@@ -68,8 +68,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for Sam Smith - Writing\'s on the Wall', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Writing\'s on the Wall', 'Sam Smith').then(function (lyrics) {
+    it('should find lyrics for Sam Smith - Writing\'s on the Wall', (done) => {
+      alltomp3.findLyrics('Writing\'s on the Wall', 'Sam Smith').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/^ive-been-here-before-but-always-hit-the-floor-ive-spent-a-lifetime-running-and-i-always-get-away/);
@@ -77,8 +77,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for C2C - Down The Road', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Down The Road', 'C2C').then(function (lyrics) {
+    it('should find lyrics for C2C - Down The Road', (done) => {
+      alltomp3.findLyrics('Down The Road', 'C2C').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/have-no-place-to-go-have-no-place-to-go-darling/);
@@ -86,8 +86,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for Galantis - Runaway (U & I)', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Runaway (U & I)', 'Galantis').then(function (lyrics) {
+    it('should find lyrics for Galantis - Runaway (U & I)', (done) => {
+      alltomp3.findLyrics('Runaway (U & I)', 'Galantis').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/think-i-can-fly-think-i-can-fly-when-im-with-u/);
@@ -95,8 +95,8 @@ describe('findLyrics', function() {
         done();
       });
     });
-    it('should find lyrics for Mika - Elle me dit', function (done) {
-      var lyricsQuery = alltomp3.findLyrics('Elle me dit', 'Mika').then(function (lyrics) {
+    it('should find lyrics for Mika - Elle me dit', (done) => {
+      alltomp3.findLyrics('Elle me dit', 'Mika').then((lyrics) => {
         lyrics = _.kebabCase(lyrics);
 
         expect(lyrics).to.match(/elle-me-dit-ecris-une-chanson-contente-pas-une-chanson-deprimante-une-chanson-que-tout-l((e-)?)monde-aime/);
