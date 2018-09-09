@@ -1813,7 +1813,9 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
 
     emitter.emit('playlist-infos', playlistInfos);
 
-    downloadNext(playlistInfos.items, 0);
+    for (let i = 0; i < maxSimultaneous; i += 1) {
+      downloadNext(playlistInfos.items, i);
+    }
   });
 
   const downloadNext = (urls, currentIndex) => {
@@ -1881,7 +1883,7 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
     dl.on('error', () => {
       emitter.emit('error', new Error(currentIndex));
       if (running < maxSimultaneous) {
-        downloadNext(urls, lastIndex+1);
+        downloadNext(urls, lastIndex + 1);
       }
     });
   }
@@ -1924,7 +1926,9 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
 
     emitter.emit('playlist-infos', playlistInfos);
 
-    downloadNext(playlistInfos.items, 0);
+    for (let i = 0; i < maxSimultaneous; i += 1) {
+      downloadNext(playlistInfos.items, i);
+    }
   });
 
   const downloadNext = (urls, currentIndex) => {
@@ -2012,6 +2016,11 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
       };
 
       handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
+    }).catch(() => {
+      emitter.emit('error', new Error(currentIndex));
+      if (running < maxSimultaneous) {
+        downloadNext(urls, lastIndex + 1);
+      }
     });
   }
 
