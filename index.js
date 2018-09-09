@@ -167,7 +167,7 @@ at3.findLyrics = (title, artistName) => {
     _.forEach($('.search_results_row_color'), (e) => {
       let artist = $(e).text().replace(/ - .+$/, '');
       let currentScore = levenshtein.get(artistName, artist);
-      if (closestScore == -1 || currentScore < closestScore) {
+      if (closestScore === -1 || currentScore < closestScore) {
         closestScore = currentScore;
         closestLink = $(e).find('a').last().attr('href');
       }
@@ -1277,7 +1277,7 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
           id: video.id,
           url: 'https://www.youtube.com/watch?v=' + video.id,
           title: improveTitle(video.snippet.title),
-          hd: (video.contentDetails.definition == 'hd'),
+          hd: (video.contentDetails.definition === 'hd'),
           duration: parseTime(video.contentDetails.duration),
           views: parseInt(video.statistics.viewCount),
           realLike: realLike,
@@ -1331,12 +1331,12 @@ at3.findBestVideo = (song, videos, v) => {
     let songArtista = songArtist.split('');
 
     const videoSongTitle = lcs(videoTitlea, songTitlea);
-    if (videoSongTitle.length > 0 && videoSongTitle.startString2 === 0 && videoTitle[videoSongTitle.startString1 + videoSongTitle.length - 1] == ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
+    if (videoSongTitle.length > 0 && videoSongTitle.startString2 === 0 && videoTitle[videoSongTitle.startString1 + videoSongTitle.length - 1] === ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
       videoTitle = videoTitle.substring(0, videoSongTitle.startString1) + ' ' + videoTitle.substring(videoSongTitle.startString1 + videoSongTitle.length);
       videoTitlea = videoTitle.split('');
     }
     const videoSongArtist = lcs(videoTitlea, songArtista);
-    if (videoSongArtist.length > 0 && videoSongArtist.startString2 === 0 && videoTitle[videoSongArtist.startString1 + videoSongArtist.length - 1] == ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
+    if (videoSongArtist.length > 0 && videoSongArtist.startString2 === 0 && videoTitle[videoSongArtist.startString1 + videoSongArtist.length - 1] === ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
       videoTitle = videoTitle.substring(0, videoSongArtist.startString1) + videoTitle.substring(videoSongArtist.startString1 + videoSongArtist.length);
     }
 
@@ -1560,7 +1560,7 @@ at3.downloadTrack = (track, outputFolder, callback, v) => {
 at3.getPlaylistURLsInfos = (url) => {
   let type = at3.guessURLType(url);
 
-  if (type == 'youtube') {
+  if (type === 'youtube') {
     let playlistId = url.match(/list=([0-9a-zA-Z_-]+)/);
     playlistId = playlistId[1];
     let playlistInfos = {};
@@ -1602,7 +1602,7 @@ at3.getPlaylistURLsInfos = (url) => {
     return Promise.all([playlistItemsq, playlistq]).then(() => {
       return playlistInfos;
     });
-  } else if (type == 'soundcloud') {
+  } else if (type === 'soundcloud') {
     return request({
       url: 'http://api.soundcloud.com/resolve?client_id=' + API_SOUNDCLOUD + '&url=' + url,
       json: true,
@@ -1649,7 +1649,7 @@ at3.getPlaylistTitlesInfos = (url) => {
   const regSpotifyPlaylist = /user\/([0-9a-zA-Z_.-]+)\/playlist\/([0-9a-zA-Z]+)/;
   const regSpotifyAlbum = /album\/([0-9a-zA-Z]+)/;
 
-  if (type == 'deezer') {
+  if (type === 'deezer') {
     // Deezer Playlist
     if (regDeezerPlaylist.test(url)) {
       const playlistId = url.match(regDeezerPlaylist)[1];
@@ -1714,7 +1714,7 @@ at3.getPlaylistTitlesInfos = (url) => {
         return albumInfos;
       });
     }
-  } else if (type == 'spotify') {
+  } else if (type === 'spotify') {
     // Spotify Playlist
     if (regSpotifyPlaylist.test(url)) {
       const userId = url.match(regSpotifyPlaylist)[1];
@@ -1820,14 +1820,14 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
     if (aborted) {
       return;
     }
-    if (urls.length == currentIndex) {
+    if (urls.length === currentIndex) {
       if (running === 0) {
         emitter.emit('end');
         callback(urls);
       }
       return;
     }
-    running++;
+    running += 1;
     if (currentIndex > lastIndex) {
       lastIndex = currentIndex;
     }
@@ -1843,7 +1843,7 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
         currentUrl.file = infos.file;
         currentUrl.infos = infos.infos;
       }
-      running--;
+      running -= 1;
 
       emitter.emit('end-url', currentIndex);
 
@@ -1931,14 +1931,14 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
     if (aborted) {
       return;
     }
-    if (urls.length == currentIndex) {
+    if (urls.length === currentIndex) {
       if (running === 0) {
         emitter.emit('end');
         callback(urls);
       }
       return;
     }
-    running++;
+    running += 1;
     if (currentIndex > lastIndex) {
       lastIndex = currentIndex;
     }
@@ -1961,7 +1961,7 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
         }
         currentTrack.file = infos.file;
         currentTrack.infos = infos.infos;
-        running--;
+        running -= 1;
 
         emitter.emit('end-url', currentIndex);
 
@@ -1995,13 +1995,13 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
           emitter.emit('infos', currentIndex);
         });
         dl.on('error', () => {
-          if (i < videos.length) {
-            i++;
+          if (i < videos.length - 1) {
+            i += 1;
             handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
           } else {
             emitter.emit('error', new Error(currentIndex));
             if (running < maxSimultaneous) {
-              downloadNext(urls, lastIndex+1);
+              downloadNext(urls, lastIndex + 1);
             }
           }
         });
@@ -2175,18 +2175,18 @@ at3.typeOfQuery = (query) => {
     return 'not-supported';
   }
 
-  if (type == 'youtube' && /list=([0-9a-zA-Z_-]+)/.test(query)) {
+  if (type === 'youtube' && /list=([0-9a-zA-Z_-]+)/.test(query)) {
     return 'playlist-url';
-  } else if (type == 'deezer') {
+  } else if (type === 'deezer') {
     if (/\/(playlist|album)\//.test(query)) {
       return 'playlist-url';
     } else if (/\/track\//.test(query)) {
       return 'track-url';
     }
     return 'not-supported';
-  } else if (type == 'soundcloud' && /\/sets\//.test(query)) {
+  } else if (type === 'soundcloud' && /\/sets\//.test(query)) {
     return 'playlist-url';
-  } else if (type == 'spotify') {
+  } else if (type === 'spotify') {
     if (/\/(playlist|album)\//.test(query)) {
       return 'playlist-url';
     } else if (/\/track\//.test(query)) {
