@@ -255,12 +255,12 @@ at3.requestSpotify = (url) => {
 * @return Event
 */
 at3.downloadWithYoutubeDl = (url, outputFile) => {
-  let download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], {maxBuffer: Infinity});
+  const download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], {maxBuffer: Infinity});
   const downloadEmitter = new EventEmitter();
   let aborted = false;
 
   let size = 0;
-  download.on('info', (info) => {
+  download.once('info', (info) => {
     size = info.size;
 
     downloadEmitter.emit('download-start', {
@@ -271,7 +271,7 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
   });
 
   let pos = 0;
-  download.on('data', (chunk) => {
+  const onData = (chunk) => {
     if (aborted) {
       abort();
     }
@@ -285,16 +285,19 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
         progress: percent,
       });
     }
-  });
+  };
+  download.on('data', onData);
 
-  download.on('end', () => {
+  download.once('end', () => {
     if (aborted) {
       return;
     }
+    download.removeListener('data', onData);
     downloadEmitter.emit('download-end');
   });
 
-  download.on('error', (error) => {
+  download.once('error', (error) => {
+    download.removeListener('data', onData);
     downloadEmitter.emit('error', new Error(error));
   });
 
@@ -308,7 +311,7 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
     }
   }
 
-  downloadEmitter.on('abort', abort);
+  downloadEmitter.once('abort', abort);
 
   return downloadEmitter;
 };
@@ -332,39 +335,44 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
   if (at3.FFPROBE_PATH) {
     convert.setFfprobePath(at3.FFPROBE_PATH);
   }
-  convert.audioBitrate(bitrate)
-  .audioCodec('libmp3lame')
-  .on('codecData', (_data) => {
-    convertEmitter.emit('convert-start');
-  })
-  .on('progress', (progress) => {
+
+  const onProgress = (progress) => {
     convertEmitter.emit('convert-progress', {
       progress: progress.percent,
     });
-  })
-  .on('end', () => {
-    fs.unlinkSync(inputFile);
-    convertEmitter.emit('convert-end');
-  })
-  .on('error', (e) => {
-    if (!aborted) {
-      convertEmitter.emit('error', e);
-    } else {
-      if (fs.existsSync(inputFile)) {
-        fs.unlink(inputFile, () => {});
+  };
+
+  convert.audioBitrate(bitrate)
+    .audioCodec('libmp3lame')
+    .once('codecData', (_data) => {
+      convertEmitter.emit('convert-start');
+    })
+    .on('progress', onProgress)
+    .once('end', () => {
+      convert.removeListener('progress', onProgress);
+      fs.unlinkSync(inputFile);
+      convertEmitter.emit('convert-end');
+    })
+    .once('error', (e) => {
+      convert.removeListener('progress', onProgress);
+      if (!aborted) {
+        convertEmitter.emit('error', e);
+      } else {
+        if (fs.existsSync(inputFile)) {
+          fs.unlink(inputFile, () => {});
+        }
+        if (fs.existsSync(outputFile)) {
+          fs.unlink(outputFile, () => {});
+        }
       }
-      if (fs.existsSync(outputFile)) {
-        fs.unlink(outputFile, () => {});
+    })
+    .once('start', () => {
+      started = true;
+      if (aborted) {
+        abort();
       }
-    }
-  })
-  .on('start', () => {
-    started = true;
-    if (aborted) {
-      abort();
-    }
-  })
-  .save(outputFile);
+    })
+    .save(outputFile);
 
   const abort = () => {
     aborted = true;
@@ -373,7 +381,7 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
     }
   }
 
-  convertEmitter.on('abort', abort);
+  convertEmitter.once('abort', abort);
 
   return convertEmitter;
 };
@@ -412,38 +420,42 @@ at3.downloadSingleURL = (url, outputFile, bitrate) => {
   let downloadEnded = false;
   let convert;
 
-  let dl = at3.downloadWithYoutubeDl(url, tempFile);
-
-  dl.on('download-start', () => {
-    progressEmitter.emit('start');
-  });
-  dl.on('download-progress', (infos) => {
+  const dl = at3.downloadWithYoutubeDl(url, tempFile);
+  const onDlProgress = (infos) => {
     progressEmitter.emit('download', {
       progress: infos.progress,
     });
-  });
+  };
 
-  dl.on('download-end', () => {
+  dl.once('download-start', () => {
+    progressEmitter.emit('start');
+  });
+  dl.on('download-progress', onDlProgress);
+
+  dl.once('download-end', () => {
     downloadEnded = true;
+    dl.removeListener('download-progress', onDlProgress);
     progressEmitter.emit('download-end');
 
     convert = at3.convertInMP3(tempFile, outputFile, bitrate);
-
-    convert.on('convert-progress', (infos) => {
+    const onConvertProgress = (infos) => {
       progressEmitter.emit('convert', {
         progress: infos.progress,
       });
-    });
-    convert.on('convert-end', () => {
+    };
+    convert.on('convert-progress', onConvertProgress);
+    convert.once('convert-end', () => {
+      convert.removeListener('convert-progress', onConvertProgress);
       progressEmitter.emit('end');
     });
   });
 
-  dl.on('error', (error) => {
+  dl.once('error', (error) => {
+    dl.removeListener('download-progress', onDlProgress);
     progressEmitter.emit('error', new Error(error));
   });
 
-  progressEmitter.on('abort', () => {
+  progressEmitter.once('abort', () => {
     if (!downloadEnded) {
       dl.emit('abort');
     } else {
@@ -1015,21 +1027,26 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
   const tempFile = (at3.tempFolder || outputFolder) + randomstring.generate(10) + '.mp3';
 
   // Download and convert file
-  let dl = at3.downloadSingleURL(url, tempFile, '256k');
-  dl.on('download', (infos) => {
+  const dl = at3.downloadSingleURL(url, tempFile, '256k');
+  const onDownload = (infos) => {
     progressEmitter.emit('download', infos);
-  });
-  dl.on('download-end', () => {
+  };
+  const onConvert = (infos) => {
+    progressEmitter.emit('convert', infos, infos);
+  };
+  dl.on('download', onDownload);
+  dl.once('download-end', () => {
+    dl.removeListener('download', onDownload);
     progressEmitter.emit('download-end');
   });
-  dl.on('convert', (infos) => {
-    progressEmitter.emit('convert', infos, infos);
-  });
-  dl.on('error', (error) => {
+  dl.on('convert', onConvert);
+  dl.once('error', (error) => {
+    dl.removeListener('download', onDownload);
+    dl.removeListener('convert', onConvert);
     callback(null, 'error');
     progressEmitter.emit('error', new Error(error));
   });
-  progressEmitter.on('abort', () => {
+  progressEmitter.once('abort', () => {
     dl.emit('abort');
   });
 
@@ -1075,6 +1092,7 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
 
   // Try to find information based on MP3 file when dl is finished
   dl.once('end', () => {
+    dl.removeListener('convert', onConvert);
     progressEmitter.emit('convert-end');
 
     if (!infos || (!infos.deezerId && !infos.spotifyId)) {
@@ -1444,28 +1462,41 @@ at3.findAndDownload = (query, outputFolder, callback, v) => {
     let i = 0;
     progressEmitter.emit('search-end');
     let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
-    dl.on('download', (infos) => {
+
+    const onDownload = (infos) => {
       progressEmitter.emit('download', infos);
-    });
-    dl.on('download-end', () => {
+    };
+    const onConvert = (infos) => {
+      progressEmitter.emit('convert', infos);
+    };
+    const onInfos = (infos) => {
+      progressEmitter.emit('infos', infos);
+    };
+
+    dl.on('download', onDownload);
+    dl.once('download-end', () => {
+      dl.removeListener('download', onDownload);
       progressEmitter.emit('download-end');
     });
-    dl.on('convert', (infos) => {
-      progressEmitter.emit('convert', infos);
-    });
-    dl.on('convert-end', () => {
+    dl.on('convert', onConvert);
+    dl.once('convert-end', () => {
+      dl.removeListener('convert', onConvert);
       progressEmitter.emit('convert-end');
     });
-    dl.on('infos', (infos) => {
-      progressEmitter.emit('infos', infos);
-    });
-    dl.on('error', (error) => {
+    dl.on('infos', onInfos);
+    dl.once('error', (error) => {
+      dl.removeListener('download', onDownload);
+      dl.removeListener('convert', onConvert);
+      dl.removeListener('infos', onInfos);
       // [TODO]: try to download the next video, in case of youtube-dl error only
       // if (i < results.length) {
       //     dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
       // } else {
         progressEmitter.emit('error', new Error(error));
       // }
+    });
+    dl.once('end', () => {
+      dl.removeListener('infos', onInfos);
     });
   }).catch(() => {
     progressEmitter.emit('error', new Error("Cannot find any video matching"));
@@ -1510,30 +1541,39 @@ at3.downloadTrack = (track, outputFolder, callback, v) => {
       }
       let aborted = false;
       let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
-      dl.on('download', (infos) => {
+      const onDownload = (infos) => {
         progressEmitter.emit('download', infos);
-      });
-      dl.on('download-end', () => {
+      };
+      const onConvert = (infos) => {
+        progressEmitter.emit('convert', infos);
+      };
+      const onInfos = (infos) => {
+        progressEmitter.emit('infos', infos);
+      };
+      dl.on('download', onDownload);
+      dl.once('download-end', () => {
+        dl.removeListener('download', onDownload);
         progressEmitter.emit('download-end');
       });
-      dl.on('convert', (infos) => {
-        progressEmitter.emit('convert', infos);
-      });
-      dl.on('convert-end', () => {
+      dl.on('convert', onConvert);
+      dl.once('convert-end', () => {
+        dl.removeListener('convert', onConvert);
         progressEmitter.emit('convert-end');
       });
-      dl.on('infos', (infos) => {
-        progressEmitter.emit('infos', infos);
-      });
-      dl.on('end', finalInfos => {
+      dl.on('infos', onInfos);
+      dl.once('end', finalInfos => {
+        dl.removeListener('infos', onInfos);
         progressEmitter.emit('end', finalInfos);
       });
-      dl.on('error', (_error) => {
+      dl.once('error', (_error) => {
+        dl.removeListener('download', onDownload);
+        dl.removeListener('convert', onConvert);
+        dl.removeListener('infos', onInfos);
         i += 1;
         aborted = true;
         dlNext();
       });
-      progressEmitter.on('abort', () => {
+      progressEmitter.once('abort', () => {
         if (!aborted) {
           dl.emit('abort');
         }
@@ -1834,13 +1874,13 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
       lastIndex = currentIndex;
     }
 
-    let currentUrl = urls[currentIndex];
+    const currentUrl = urls[currentIndex];
 
     currentUrl.progress = {};
 
     emitter.emit('begin-url', currentIndex);
 
-    let dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, (infos, _error) => {
+    const dl = at3.downloadAndTagSingleURL(currentUrl.url, outputFolder, (infos, _error) => {
       if (infos) {
         currentUrl.file = infos.file;
         currentUrl.infos = infos.infos;
@@ -1854,41 +1894,53 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
       }
     });
 
-    emitter.on('abort', () => {
+    emitter.once('abort', () => {
       aborted = true;
       dl.emit('abort');
     });
 
-    dl.on('download', (infos) => {
+    const onDownload = (infos) => {
       currentUrl.progress.download = infos;
       emitter.emit('download', currentIndex);
-    });
-    dl.on('download-end', () => {
+    };
+    const onConvert = (infos) => {
+      currentUrl.progress.convert = infos;
+      emitter.emit('convert', currentIndex);
+    };
+    const onInfos = (infos) => {
+      currentUrl.infos = infos;
+      emitter.emit('infos', currentIndex);
+    };
+
+    dl.on('download', onDownload);
+    dl.once('download-end', () => {
+      dl.removeListener('download', onDownload);
       emitter.emit('download-end', currentIndex);
       if (running < maxSimultaneous) {
         downloadNext(urls, lastIndex+1);
       }
     });
-    dl.on('convert', (infos) => {
-      currentUrl.progress.convert = infos;
-      emitter.emit('convert', currentIndex);
-    });
-    dl.on('convert-end', () => {
+    dl.on('convert', onConvert);
+    dl.once('convert-end', () => {
+      dl.removeListener('convert', onConvert);
       emitter.emit('convert-end', currentIndex);
     });
-    dl.on('infos', (infos) => {
-      currentUrl.infos = infos;
-      emitter.emit('infos', currentIndex);
-    });
-    dl.on('error', () => {
+    dl.on('infos', onInfos);
+    dl.once('error', () => {
+      dl.removeListener('download', onDownload);
+      dl.removeListener('convert', onConvert);
+      dl.removeListener('infos', onInfos);
       emitter.emit('error', new Error(currentIndex));
       if (running < maxSimultaneous) {
         downloadNext(urls, lastIndex + 1);
       }
     });
+    dl.once('end', () => {
+      dl.removeListener('infos', onInfos);
+    });
   }
 
-  emitter.on('abort', () => {
+  emitter.once('abort', () => {
     aborted = true;
   });
 
@@ -1977,28 +2029,39 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
       let i = 0;
 
       const handleDl = (dl) => {
-        dl.on('download', (infos) => {
+        const onDownload = (infos) => {
           currentTrack.progress.download = infos;
           emitter.emit('download', currentIndex);
-        });
-        dl.on('download-end', () => {
+        };
+        const onConvert = (infos) => {
+          currentTrack.progress.convert = infos;
+          emitter.emit('convert', currentIndex);
+        };
+        const onInfos = (infos) => {
+          currentTrack.infos = infos;
+          emitter.emit('infos', currentIndex);
+        };
+
+        dl.on('download', onDownload);
+        dl.once('download-end', () => {
+          dl.removeListener('download', onDownload);
           emitter.emit('download-end', currentIndex);
           if (running < maxSimultaneous) {
             downloadNext(urls, lastIndex+1);
           }
         });
-        dl.on('convert', (infos) => {
-          currentTrack.progress.convert = infos;
-          emitter.emit('convert', currentIndex);
-        });
-        dl.on('convert-end', () => {
+        dl.on('convert', onConvert);
+        dl.once('convert-end', () => {
+          dl.removeListener('convert', onConvert);
           emitter.emit('convert-end', currentIndex);
         });
-        dl.on('infos', (infos) => {
-          currentTrack.infos = infos;
-          emitter.emit('infos', currentIndex);
+        dl.on('infos', onInfos);
+        dl.once('end', () => {
+          dl.removeListener('infos', onInfos);
         });
-        dl.on('error', () => {
+        dl.once('error', () => {
+          dl.removeListener('download', onDownload);
+          dl.removeListener('convert', onConvert);
           if (i < videos.length - 1) {
             i += 1;
             handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
@@ -2009,7 +2072,7 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
             }
           }
         });
-        emitter.on('abort', () => {
+        emitter.once('abort', () => {
           aborted = true;
           dl.emit('abort');
         });
@@ -2024,7 +2087,7 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
     });
   }
 
-  emitter.on('abort', () => {
+  emitter.once('abort', () => {
     aborted = true;
   });
 
@@ -2103,13 +2166,13 @@ at3.downloadTrackURL = (url, outputFolder, callback, v) => {
  * @return e2
  */
 at3.forwardEvents = (e1, e2) => {
-  let events = ['download', 'download-end', 'convert', 'convert-end', 'infos', 'error', 'playlist-infos', 'begin-url', 'end-url', 'end', 'search-end'];
+  const events = ['download', 'download-end', 'convert', 'convert-end', 'infos', 'error', 'playlist-infos', 'begin-url', 'end-url', 'end', 'search-end'];
   events.forEach((e) => {
     e1.on((e, data) => {
       e2.emit(e, data);
     });
   });
-  e2.on('abort', () => {
+  e2.once('abort', () => {
     e1.emit('abort');
   });
   return e2;
