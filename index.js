@@ -2168,7 +2168,7 @@ at3.downloadTrackURL = (url, outputFolder, callback, v) => {
 at3.forwardEvents = (e1, e2) => {
   const events = ['download', 'download-end', 'convert', 'convert-end', 'infos', 'error', 'playlist-infos', 'begin-url', 'end-url', 'end', 'search-end'];
   events.forEach((e) => {
-    e1.on((e, data) => {
+    e1.on(e, (data) => {
       e2.emit(e, data);
     });
   });

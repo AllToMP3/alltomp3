@@ -1,6 +1,6 @@
 {
   "name": "alltomp3",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Download and convert in MP3 with tags online videos",
   "main": "index.js",
   "scripts": {
