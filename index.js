@@ -1686,7 +1686,7 @@ at3.getPlaylistTitlesInfos = (url) => {
   const regDeezerPlaylist = /playlist\/([0-9]+)/;
   const regDeezerAlbum = /album\/([0-9]+)/;
 
-  const regSpotifyPlaylist = /user\/([0-9a-zA-Z_.-]+)\/playlist\/([0-9a-zA-Z]+)/;
+  const regSpotifyPlaylist = /playlist\/([0-9a-zA-Z]+)/;
   const regSpotifyAlbum = /album\/([0-9a-zA-Z]+)/;
 
   if (type === 'deezer') {
@@ -1757,15 +1757,14 @@ at3.getPlaylistTitlesInfos = (url) => {
   } else if (type === 'spotify') {
     // Spotify Playlist
     if (regSpotifyPlaylist.test(url)) {
-      const userId = url.match(regSpotifyPlaylist)[1];
-      const playlistId = url.match(regSpotifyPlaylist)[2];
+      const playlistId = url.match(regSpotifyPlaylist)[1];
 
-      return at3.requestSpotify('https://api.spotify.com/v1/users/' + userId + '/playlists/' + playlistId).then((playlistDetails) => {
+      return at3.requestSpotify('https://api.spotify.com/v1/playlists/' + playlistId).then((playlistDetails) => {
         const playlist = {};
         const items = [];
 
         playlist.title = playlistDetails.name;
-        playlist.artistName = userId;
+        playlist.artistName = playlistDetails.owner.id;
         playlist.cover = playlistDetails.images[0].url;
 
         playlist.items = items;
