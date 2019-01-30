@@ -35,6 +35,10 @@ at3.relevanceLanguage;
 // Folder for temporary files
 at3.tempFolder = null;
 
+// Fix for renameSync failing on Windows when cropping cover images
+// See https://github.com/lovell/sharp/issues/415
+sharp.cache(false);
+
 at3.configEyeD3 = (eyeD3Path, eyeD3PathPythonPath, metaHook) => {
   process.env.PYTHONPATH = eyeD3PathPythonPath;
   eyed3 = new EyeD3({ eyed3_path: eyeD3Path });
