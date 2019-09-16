@@ -452,6 +452,9 @@ at3.downloadSingleURL = (url, outputFile, bitrate) => {
       convert.removeListener('convert-progress', onConvertProgress);
       progressEmitter.emit('end');
     });
+    convert.once('error', (error) => {
+        progressEmitter.emit('error', error);
+    })
   });
 
   dl.once('error', (error) => {
