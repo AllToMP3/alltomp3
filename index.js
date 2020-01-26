@@ -48,7 +48,7 @@ at3.configEyeD3 = (eyeD3Path, eyeD3PathPythonPath, metaHook) => {
   eyed3.metaHook = metaHook;
 };
 
-at3.FPCALC_PATH = "fpcalc";
+at3.FPCALC_PATH = 'fpcalc';
 at3.setFpcalcPath = (fpcalcPath) => {
   at3.FPCALC_PATH = fpcalcPath;
 };
@@ -63,11 +63,11 @@ at3.setFfmpegPaths = (ffmpegPath, ffprobePath) => {
 };
 
 /**
-* Find lyrics for a song
-* @param title string
-* @param artistName string
-* @return Promise
-*/
+ * Find lyrics for a song
+ * @param title string
+ * @param artistName string
+ * @return Promise
+ */
 at3.findLyrics = (title, artistName) => {
   let promises = [];
 
@@ -86,10 +86,10 @@ at3.findLyrics = (title, artistName) => {
   };
 
   const lyricsUrl = (title) => {
-  	return _.kebabCase(_.trim(_.toLower(_.deburr(title))));
+    return _.kebabCase(_.trim(_.toLower(_.deburr(title))));
   };
   const lyricsManiaUrl = (title) => {
-  	return _.snakeCase(_.trim(_.toLower(_.deburr(title))));
+    return _.snakeCase(_.trim(_.toLower(_.deburr(title))));
   };
   const lyricsManiaUrlAlt = (title) => {
     title = _.trim(_.toLower(title));
@@ -136,7 +136,7 @@ at3.findLyrics = (title, artistName) => {
     uri: 'http://www.lyricsmania.com/' + lyricsManiaUrl(title) + '_' + lyricsManiaUrl(artistName) + '.html',
     transform: (body) => {
       return cheerio.load(body);
-    }
+    },
   }).then(($) => {
     if ($('.lyrics-body').length === 0) {
       return Promise.reject();
@@ -145,7 +145,12 @@ at3.findLyrics = (title, artistName) => {
   });
 
   const reqLyricsMania3 = request({
-    uri: 'http://www.lyricsmania.com/' + lyricsManiaUrlAlt(title) + '_lyrics_' + encodeURIComponent(lyricsManiaUrlAlt(artistName)) + '.html',
+    uri:
+      'http://www.lyricsmania.com/' +
+      lyricsManiaUrlAlt(title) +
+      '_lyrics_' +
+      encodeURIComponent(lyricsManiaUrlAlt(artistName)) +
+      '.html',
     transform: (body) => {
       return cheerio.load(body);
     },
@@ -166,28 +171,36 @@ at3.findLyrics = (title, artistName) => {
     transform: (body) => {
       return cheerio.load(body);
     },
-  }).then(($) => {
-    let closestLink, closestScore = -1;
-    _.forEach($('.search_results_row_color'), (e) => {
-      let artist = $(e).text().replace(/ - .+$/, '');
-      let currentScore = levenshtein.get(artistName, artist);
-      if (closestScore === -1 || currentScore < closestScore) {
-        closestScore = currentScore;
-        closestLink = $(e).find('a').last().attr('href');
+  })
+    .then(($) => {
+      let closestLink,
+        closestScore = -1;
+      _.forEach($('.search_results_row_color'), (e) => {
+        let artist = $(e)
+          .text()
+          .replace(/ - .+$/, '');
+        let currentScore = levenshtein.get(artistName, artist);
+        if (closestScore === -1 || currentScore < closestScore) {
+          closestScore = currentScore;
+          closestLink = $(e)
+            .find('a')
+            .last()
+            .attr('href');
+        }
+      });
+      if (!closestLink) {
+        return Promise.reject();
       }
+      return request({
+        uri: 'http://www.sweetslyrics.com/' + closestLink,
+        transform: (body) => {
+          return cheerio.load(body);
+        },
+      });
+    })
+    .then(($) => {
+      return textln($('.lyric_full_text'));
     });
-    if (!closestLink) {
-      return Promise.reject();
-    }
-    return request({
-      uri: 'http://www.sweetslyrics.com/' + closestLink,
-      transform: (body) => {
-        return cheerio.load(body);
-      },
-    });
-  }).then(($) => {
-    return textln($('.lyric_full_text'));
-  });
 
   if (/\(.*\)/.test(title) || /\[.*\]/.test(title)) {
     promises.push(at3.findLyrics(title.replace(/\(.*\)/g, '').replace(/\[.*\]/g, ''), artistName));
@@ -206,11 +219,11 @@ at3.findLyrics = (title, artistName) => {
 };
 
 /**
-* Returns true if the query corresponds
-* to an URL, else false
-* @param query string
-* @return boolean
-*/
+ * Returns true if the query corresponds
+ * to an URL, else false
+ * @param query string
+ * @return boolean
+ */
 at3.isURL = (query) => {
   return /^http(s?):\/\//.test(query);
 };
@@ -220,18 +233,20 @@ at3.isURL = (query) => {
  * @return {Promise}
  */
 at3.spotifyToken = () => {
-  return request.post({
-    uri: 'https://accounts.spotify.com/api/token',
-    headers: {
-      'Authorization': 'Basic ' + API_SPOTIFY,
-    },
-    form: {
-      grant_type: 'client_credentials',
-    },
-    json: true,
-  }).then((r) => {
-    return r.access_token;
-  });
+  return request
+    .post({
+      uri: 'https://accounts.spotify.com/api/token',
+      headers: {
+        Authorization: 'Basic ' + API_SPOTIFY,
+      },
+      form: {
+        grant_type: 'client_credentials',
+      },
+      json: true,
+    })
+    .then((r) => {
+      return r.access_token;
+    });
 };
 
 /**
@@ -241,7 +256,6 @@ at3.spotifyToken = () => {
  */
 at3.requestSpotify = (url) => {
   return at3.spotifyToken().then((token) => {
-
     return request({
       uri: url,
       json: true,
@@ -253,13 +267,13 @@ at3.requestSpotify = (url) => {
 };
 
 /**
-* Download a single video with youtube-dl
-* @param url
-* @param outputFile
-* @return Event
-*/
+ * Download a single video with youtube-dl
+ * @param url
+ * @param outputFile
+ * @return Event
+ */
 at3.downloadWithYoutubeDl = (url, outputFile) => {
-  const download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], {maxBuffer: Infinity});
+  const download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], { maxBuffer: Infinity });
   const downloadEmitter = new EventEmitter();
   let aborted = false;
 
@@ -282,7 +296,7 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
     pos += chunk.length;
 
     if (size) {
-      let percent = (pos / size * 100).toFixed(2);
+      let percent = ((pos / size) * 100).toFixed(2);
 
       downloadEmitter.emit('download-progress', {
         downloaded: pos,
@@ -313,7 +327,7 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
     if (fs.existsSync(outputFile)) {
       fs.unlinkSync(outputFile);
     }
-  }
+  };
 
   downloadEmitter.once('abort', abort);
 
@@ -321,12 +335,12 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
 };
 
 /**
-* Convert a outputFile in MP3
-* @param inputFile
-* @param outputFile
-* @param bitrate string
-* @return Event
-*/
+ * Convert a outputFile in MP3
+ * @param inputFile
+ * @param outputFile
+ * @param bitrate string
+ * @return Event
+ */
 at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
   const convertEmitter = new EventEmitter();
   let aborted = false;
@@ -346,7 +360,8 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
     });
   };
 
-  convert.audioBitrate(bitrate)
+  convert
+    .audioBitrate(bitrate)
     .audioCodec('libmp3lame')
     .once('codecData', (_data) => {
       convertEmitter.emit('convert-start');
@@ -383,7 +398,7 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
     if (started) {
       convert.kill();
     }
-  }
+  };
 
   convertEmitter.once('abort', abort);
 
@@ -391,10 +406,10 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
 };
 
 /**
-* Get infos about an online video with youtube-dl
-* @param url
-* @return Promise
-*/
+ * Get infos about an online video with youtube-dl
+ * @param url
+ * @return Promise
+ */
 at3.getInfosWithYoutubeDl = (url) => {
   return new Promise((resolve, reject) => {
     youtubedl.getInfo(url, ['--no-check-certificate'], (err, infos) => {
@@ -412,12 +427,12 @@ at3.getInfosWithYoutubeDl = (url) => {
 };
 
 /**
-* Download a single URL in MP3
-* @param url
-* @param outputFile
-* @param bitrate
-* @return Event
-*/
+ * Download a single URL in MP3
+ * @param url
+ * @param outputFile
+ * @param bitrate
+ * @return Event
+ */
 at3.downloadSingleURL = (url, outputFile, bitrate) => {
   const progressEmitter = new EventEmitter();
   let tempFile = outputFile + '.video';
@@ -453,8 +468,8 @@ at3.downloadSingleURL = (url, outputFile, bitrate) => {
       progressEmitter.emit('end');
     });
     convert.once('error', (error) => {
-        progressEmitter.emit('error', error);
-    })
+      progressEmitter.emit('error', error);
+    });
   });
 
   dl.once('error', (error) => {
@@ -474,14 +489,14 @@ at3.downloadSingleURL = (url, outputFile, bitrate) => {
 };
 
 /**
-* Try to find to title and artist from a string
-* (example: a YouTube video title)
-* @param query string
-* @param exact boolean Can the query be modified or not
-* @param last boolean Last call
-* @param v boolean Verbose
-* @return Promise
-*/
+ * Try to find to title and artist from a string
+ * (example: a YouTube video title)
+ * @param query string
+ * @param exact boolean Can the query be modified or not
+ * @param last boolean Last call
+ * @param v boolean Verbose
+ * @return Promise
+ */
 at3.guessTrackFromString = (query, exact, last, v) => {
   // [TODO] Replace exact by a level of strictness
   // 0: no change at all
@@ -497,14 +512,14 @@ at3.guessTrackFromString = (query, exact, last, v) => {
   }
 
   if (v) {
-    console.log("Query: ", query);
+    console.log('Query: ', query);
   }
 
   let searchq = query;
   if (!exact) {
     searchq = searchq.replace(/\(.*\)/g, '');
     searchq = searchq.replace(/\[.*\]/g, '');
-    searchq = searchq.replace(/lyric(s?)|parole(s?)/ig, '');
+    searchq = searchq.replace(/lyric(s?)|parole(s?)/gi, '');
     searchq = searchq.replace(/^'/, '');
     searchq = searchq.replace(/ '/g, ' ');
     searchq = searchq.replace(/' /g, ' ');
@@ -529,8 +544,11 @@ at3.guessTrackFromString = (query, exact, last, v) => {
     let title, artistName, tempTitle;
     _.forEach(body.data, (s) => {
       if (!title) {
-        if (vsimpleName(searchq,exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
-          if (delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title_short), 'ig')) || vsimpleName(s.title_short).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))) {
+        if (vsimpleName(searchq, exact).replace(new RegExp(vsimpleName(s.artist.name), 'ig'))) {
+          if (
+            delArtist(s.artist.name, searchq, exact).match(new RegExp(vsimpleName(s.title_short), 'ig')) ||
+            vsimpleName(s.title_short).match(new RegExp(delArtist(s.artist.name, searchq, exact), 'ig'))
+          ) {
             artistName = s.artist.name;
             title = s.title;
           } else if (!artistName) {
@@ -545,7 +563,7 @@ at3.guessTrackFromString = (query, exact, last, v) => {
       infos.artistName = artistName;
     }
     if (v) {
-      console.log("Deezer answer: ", title, '-', artistName);
+      console.log('Deezer answer: ', title, '-', artistName);
     }
   });
 
@@ -558,7 +576,7 @@ at3.guessTrackFromString = (query, exact, last, v) => {
     _.forEach(body.results, (s) => {
       if (!title) {
         if (vsimpleName(searchq, exact).match(new RegExp(vsimpleName(s.artistName), 'gi'))) {
-          if(delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
+          if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackCensoredName), 'gi'))) {
             artistName = s.artistName;
             title = s.trackCensoredName;
           } else if (delArtist(s.artistName, searchq, exact).match(new RegExp(vsimpleName(s.trackName), 'gi'))) {
@@ -576,7 +594,7 @@ at3.guessTrackFromString = (query, exact, last, v) => {
       infos.artistName = artistName;
     }
     if (v) {
-      console.log("iTunes answer: ", title, '-', artistName);
+      console.log('iTunes answer: ', title, '-', artistName);
     }
   });
 
@@ -585,23 +603,29 @@ at3.guessTrackFromString = (query, exact, last, v) => {
 
   return Promise.all(requests).then(() => {
     if (!last && (!infos.title || !infos.artistName)) {
-      searchq = searchq.replace(/f(ea)?t(\.)? [^-]+/ig,' ');
+      searchq = searchq.replace(/f(ea)?t(\.)? [^-]+/gi, ' ');
       return at3.guessTrackFromString(searchq, false, true, v);
     }
     return infos;
   });
-
 };
 
 /**
-* Try to guess title and artist from mp3 file
-* @param file
-* @return Promise
-*/
+ * Try to guess title and artist from mp3 file
+ * @param file
+ * @return Promise
+ */
 at3.guessTrackFromFile = (file) => {
   return new Promise((resolve, _reject) => {
     acoustid(file, { key: API_ACOUSTID, fpcalc: { command: at3.FPCALC_PATH } }, (err, results) => {
-      if (err || results.length === 0 || !results[0].recordings || results[0].recordings.length === 0 || !results[0].recordings[0].artists || results[0].recordings[0].artists.length === 0) {
+      if (
+        err ||
+        results.length === 0 ||
+        !results[0].recordings ||
+        results[0].recordings.length === 0 ||
+        !results[0].recordings[0].artists ||
+        results[0].recordings[0].artists.length === 0
+      ) {
         resolve({});
         return;
       }
@@ -613,15 +637,14 @@ at3.guessTrackFromFile = (file) => {
   });
 };
 
-
 /**
-* Retrieve informations about a track from artist and title
-* @param title
-* @param artistName
-* @param exact boolean Exact search or not
-* @param v boolean Verbose
-* @return Promise
-*/
+ * Retrieve informations about a track from artist and title
+ * @param title
+ * @param artistName
+ * @param exact boolean Exact search or not
+ * @param v boolean Verbose
+ * @return Promise
+ */
 at3.retrieveTrackInformations = (title, artistName, exact, v) => {
   if (exact === undefined) {
     exact = false;
@@ -631,12 +654,12 @@ at3.retrieveTrackInformations = (title, artistName, exact, v) => {
   }
 
   if (!exact) {
-    title = title.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
+    title = title.replace(/((\[)|(\())?radio edit((\])|(\)))?/gi, '');
   }
 
   const infos = {
     title: title,
-    artistName: artistName
+    artistName: artistName,
   };
 
   const requests = [];
@@ -647,7 +670,11 @@ at3.retrieveTrackInformations = (title, artistName, exact, v) => {
   }).then((body) => {
     let deezerInfos;
     _.forEach(body.data, (s) => {
-      if(!infos.deezerId && imatch(vsimpleName(title), vsimpleName(s.title)) && imatch(vsimpleName(artistName), vsimpleName(s.artist.name))) {
+      if (
+        !infos.deezerId &&
+        imatch(vsimpleName(title), vsimpleName(s.title)) &&
+        imatch(vsimpleName(artistName), vsimpleName(s.artist.name))
+      ) {
         infos.deezerId = s.id;
         deezerInfos = _.clone(s);
       }
@@ -656,11 +683,12 @@ at3.retrieveTrackInformations = (title, artistName, exact, v) => {
       infos.artistName = deezerInfos.artist.name;
       infos.title = deezerInfos.title;
 
-      return at3.getDeezerTrackInfos(infos.deezerId, v).then((deezerInfos) => {
-        infos = deezerInfos;
-      }).catch(() => {
-
-      });
+      return at3
+        .getDeezerTrackInfos(infos.deezerId, v)
+        .then((deezerInfos) => {
+          infos = deezerInfos;
+        })
+        .catch(() => {});
     }
   });
 
@@ -670,7 +698,12 @@ at3.retrieveTrackInformations = (title, artistName, exact, v) => {
   }).then((body) => {
     let itunesInfos;
     _.forEach(body.results, (s) => {
-      if (!infos.itunesId && (imatch(vsimpleName(title), vsimpleName(s.trackName)) || imatch(vsimpleName(title), vsimpleName(s.trackCensoredName))) && imatch(vsimpleName(artistName), vsimpleName(s.artistName))) {
+      if (
+        !infos.itunesId &&
+        (imatch(vsimpleName(title), vsimpleName(s.trackName)) ||
+          imatch(vsimpleName(title), vsimpleName(s.trackCensoredName))) &&
+        imatch(vsimpleName(artistName), vsimpleName(s.artistName))
+      ) {
         infos.itunesId = s.trackId;
         itunesInfos = _.clone(s);
       }
@@ -690,11 +723,11 @@ at3.retrieveTrackInformations = (title, artistName, exact, v) => {
       infos.cover = itunesInfos.artworkUrl100.replace('100x100', '200x200');
       infos.genre = itunesInfos.primaryGenreName;
       infos.discNumber = itunesInfos.discNumber;
-      infos.duration = itunesInfos.trackTimeMillis/1000;
+      infos.duration = itunesInfos.trackTimeMillis / 1000;
     }
 
     if (v) {
-      console.log("iTunes infos: ", itunesInfos);
+      console.log('iTunes infos: ', itunesInfos);
     }
   });
 
@@ -705,55 +738,58 @@ at3.retrieveTrackInformations = (title, artistName, exact, v) => {
 };
 
 /**
-* Retrieve detailed infos about a Deezer Track
-* @param trackId
-* @param v boolean Verbosity
-* @return Promise(trackInfos)
-*/
+ * Retrieve detailed infos about a Deezer Track
+ * @param trackId
+ * @param v boolean Verbosity
+ * @return Promise(trackInfos)
+ */
 at3.getDeezerTrackInfos = (trackId, v) => {
   const infos = {
-    deezerId: trackId
+    deezerId: trackId,
   };
 
   return request({
     url: 'https://api.deezer.com/2.0/track/' + infos.deezerId,
     json: true,
-  }).then((trackInfos) => {
-    if (trackInfos.error) {
-      return Promise.reject();
-    }
+  })
+    .then((trackInfos) => {
+      if (trackInfos.error) {
+        return Promise.reject();
+      }
 
-    infos.title = trackInfos.title;
-    infos.artistName = trackInfos.artist.name;
-    infos.position = trackInfos.track_position;
-    infos.duration = trackInfos.duration;
-    infos.deezerAlbum = trackInfos.album.id;
-    infos.discNumber = trackInfos.disk_number;
+      infos.title = trackInfos.title;
+      infos.artistName = trackInfos.artist.name;
+      infos.position = trackInfos.track_position;
+      infos.duration = trackInfos.duration;
+      infos.deezerAlbum = trackInfos.album.id;
+      infos.discNumber = trackInfos.disk_number;
 
-    return request({
-      url: 'https://api.deezer.com/2.0/album/' + infos.deezerAlbum,
-      json: true,
+      return request({
+        url: 'https://api.deezer.com/2.0/album/' + infos.deezerAlbum,
+        json: true,
+      });
+    })
+    .then((albumInfos) => {
+      infos.album = albumInfos.title;
+      infos.releaseDate = albumInfos.release_date;
+      infos.nbTracks = albumInfos.tracks.data.length;
+      infos.genreId = albumInfos.genre_id;
+      infos.cover = albumInfos.cover_big;
+
+      return request({
+        url: 'https://api.deezer.com/2.0/genre/' + infos.genreId,
+        json: true,
+      });
+    })
+    .then((genreInfos) => {
+      infos.genre = genreInfos.name;
+
+      if (v) {
+        console.log('Deezer infos: ', infos);
+      }
+
+      return infos;
     });
-  }).then((albumInfos) => {
-    infos.album = albumInfos.title;
-    infos.releaseDate = albumInfos.release_date;
-    infos.nbTracks = albumInfos.tracks.data.length;
-    infos.genreId = albumInfos.genre_id;
-    infos.cover = albumInfos.cover_big;
-
-    return request({
-      url: 'https://api.deezer.com/2.0/genre/' + infos.genreId,
-      json: true,
-    });
-  }).then((genreInfos) => {
-    infos.genre = genreInfos.name;
-
-    if (v) {
-      console.log("Deezer infos: ", infos);
-    }
-
-    return infos;
-  });
 };
 
 /**
@@ -765,39 +801,42 @@ at3.getDeezerTrackInfos = (trackId, v) => {
  */
 at3.getSpotifyTrackInfos = (trackId, v) => {
   const infos = {
-    spotifyId: trackId
+    spotifyId: trackId,
   };
 
-  return at3.requestSpotify('https://api.spotify.com/v1/tracks/' + trackId).then((trackInfos) => {
-    infos.title = trackInfos.name;
-    infos.artistName = trackInfos.artists[0].name;
-    infos.duration = Math.ceil(trackInfos.duration_ms/1000);
-    infos.position = trackInfos.track_number;
-    infos.discNumber = trackInfos.disc_number;
-    infos.spotifyAlbum = trackInfos.album.id;
+  return at3
+    .requestSpotify('https://api.spotify.com/v1/tracks/' + trackId)
+    .then((trackInfos) => {
+      infos.title = trackInfos.name;
+      infos.artistName = trackInfos.artists[0].name;
+      infos.duration = Math.ceil(trackInfos.duration_ms / 1000);
+      infos.position = trackInfos.track_number;
+      infos.discNumber = trackInfos.disc_number;
+      infos.spotifyAlbum = trackInfos.album.id;
 
-    return at3.requestSpotify('https://api.spotify.com/v1/albums/' + trackInfos.album.id);
-  }).then(albumInfos => {
-    infos.album = albumInfos.name;
-    infos.cover = albumInfos.images[0].url;
-    infos.genre = albumInfos.genres[0] || '';
-    infos.nbTracks = albumInfos.tracks.total;
-    infos.releaseDate = albumInfos.release_date;
+      return at3.requestSpotify('https://api.spotify.com/v1/albums/' + trackInfos.album.id);
+    })
+    .then((albumInfos) => {
+      infos.album = albumInfos.name;
+      infos.cover = albumInfos.images[0].url;
+      infos.genre = albumInfos.genres[0] || '';
+      infos.nbTracks = albumInfos.tracks.total;
+      infos.releaseDate = albumInfos.release_date;
 
-    return infos;
-  });
+      return infos;
+    });
 };
 
 /**
-* Add tags to MP3 file
-* @param file
-* @param infos
-* @return Promise
-*/
+ * Add tags to MP3 file
+ * @param file
+ * @param infos
+ * @return Promise
+ */
 at3.tagFile = (file, infos) => {
   const meta = {
     title: infos.title,
-    artist: infos.artistName
+    artist: infos.artistName,
   };
 
   if (infos.album) {
@@ -816,7 +855,7 @@ at3.tagFile = (file, infos) => {
     meta.lyrics = infos.lyrics;
   }
   if (infos.releaseDate) {
-    meta.year = (/[0-9]{4}/.exec(infos.releaseDate))[0];
+    meta.year = /[0-9]{4}/.exec(infos.releaseDate)[0];
   }
   if (infos.genre) {
     meta.genre = infos.genre.replace(/\/.+/g, '');
@@ -831,124 +870,136 @@ at3.tagFile = (file, infos) => {
         let coverPath = file + '.cover.jpg';
 
         requestNoPromise(infos.cover, () => {
-
           // Check that the cover is a square
           const coverFile = sharp(coverPath);
-          coverFile.metadata().then((metadata) => {
-            if (metadata.width != metadata.height) {
-              // In that case we will crop the cover to get a square
-              const tempCoverPath = file + '.cover.resized.jpg';
-              return smartcrop.crop(coverPath, {width: 100, height: 100}).then((result) => {
-                let crop = result.topCrop;
-                return coverFile
-                .extract({width: crop.width, height: crop.height, left: crop.x, top: crop.y})
-                .toFile(tempCoverPath);
-              }).then(() => {
-                fs.renameSync(tempCoverPath, coverPath);
-              });
-            }
-          }).then(() => {
-            eyed3.updateMeta(file, eyed3.metaHook({image: coverPath}), (err) => {
-              fs.unlinkSync(coverPath);
-
-              if (err) {
-                return reject(err);
+          coverFile
+            .metadata()
+            .then((metadata) => {
+              if (metadata.width != metadata.height) {
+                // In that case we will crop the cover to get a square
+                const tempCoverPath = file + '.cover.resized.jpg';
+                return smartcrop
+                  .crop(coverPath, { width: 100, height: 100 })
+                  .then((result) => {
+                    let crop = result.topCrop;
+                    return coverFile
+                      .extract({ width: crop.width, height: crop.height, left: crop.x, top: crop.y })
+                      .toFile(tempCoverPath);
+                  })
+                  .then(() => {
+                    fs.renameSync(tempCoverPath, coverPath);
+                  });
               }
+            })
+            .then(() => {
+              eyed3.updateMeta(file, eyed3.metaHook({ image: coverPath }), (err) => {
+                fs.unlinkSync(coverPath);
 
-              resolve();
+                if (err) {
+                  return reject(err);
+                }
+
+                resolve();
+              });
             });
-          });
         }).pipe(fs.createWriteStream(coverPath));
       } else {
         resolve();
       }
     });
   });
-
 };
 
 /**
-* Search and return complete information about a single video url
-* @param url
-* @param v boolean Verbosity
-* @return Promise(object)
-*/
+ * Search and return complete information about a single video url
+ * @param url
+ * @param v boolean Verbosity
+ * @return Promise(object)
+ */
 at3.getCompleteInfosFromURL = (url, v) => {
   let infosFromString;
   // Try to find information based on video title
-  return at3.getInfosWithYoutubeDl(url).then((videoInfos) => {
-    infosFromString = {
-      title: videoInfos.title,
-      artistName: videoInfos.author,
-      cover: videoInfos.picture.replace('hqdefault', 'mqdefault'), // [TODO]: getting a better resolution and removing the black borders
-      originalTitle: videoInfos.title,
-    };
+  return at3
+    .getInfosWithYoutubeDl(url)
+    .then((videoInfos) => {
+      infosFromString = {
+        title: videoInfos.title,
+        artistName: videoInfos.author,
+        cover: videoInfos.picture.replace('hqdefault', 'mqdefault'), // [TODO]: getting a better resolution and removing the black borders
+        originalTitle: videoInfos.title,
+      };
 
-    if (v) {
-      console.log("Video infos: ", infosFromString);
-    }
+      if (v) {
+        console.log('Video infos: ', infosFromString);
+      }
 
-    // progressEmitter.emit('infos', _.clone(infosFromString));
-
-    return at3.guessTrackFromString(videoInfos.title, false, false, v);
-  }).then((guessStringInfos) => {
-    if (guessStringInfos.title && guessStringInfos.artistName) {
-      return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
-    } else {
-      return Promise.resolve();
-    }
-  }).then((guessStringInfos) => {
-    if (guessStringInfos) {
-      guessStringInfos.originalTitle = infosFromString.originalTitle;
-      infosFromString = guessStringInfos;
       // progressEmitter.emit('infos', _.clone(infosFromString));
-      if (v) {
-        console.log("guessStringInfos: ", guessStringInfos);
-      }
-    } else {
-      if (v) {
-        console.log('Cannot retrieve detailed information from video title');
-      }
-    }
 
-    return infosFromString;
-  }).catch((_error) => {
-    // The download must have failed to, and emit an error
-  });
+      return at3.guessTrackFromString(videoInfos.title, false, false, v);
+    })
+    .then((guessStringInfos) => {
+      if (guessStringInfos.title && guessStringInfos.artistName) {
+        return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, false, v);
+      } else {
+        return Promise.resolve();
+      }
+    })
+    .then((guessStringInfos) => {
+      if (guessStringInfos) {
+        guessStringInfos.originalTitle = infosFromString.originalTitle;
+        infosFromString = guessStringInfos;
+        // progressEmitter.emit('infos', _.clone(infosFromString));
+        if (v) {
+          console.log('guessStringInfos: ', guessStringInfos);
+        }
+      } else {
+        if (v) {
+          console.log('Cannot retrieve detailed information from video title');
+        }
+      }
+
+      return infosFromString;
+    })
+    .catch((_error) => {
+      // The download must have failed to, and emit an error
+    });
 };
 
 /**
-* Identify the song from a file and then search complete information about it
-* @param file string
-* @param v boolean Verbosity
-* @return Promise(object)
-*/
+ * Identify the song from a file and then search complete information about it
+ * @param file string
+ * @param v boolean Verbosity
+ * @return Promise(object)
+ */
 at3.getCompleteInfosFromFile = (file, v) => {
-  return at3.guessTrackFromFile(file).then((guessFileInfos) => {
-    if (guessFileInfos.title && guessFileInfos.artistName) {
-      return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
-    } else {
-      return Promise.resolve();
-    }
-  }).then((guessFileInfos) => {
-    if (guessFileInfos) {
-      if (v) {
-        console.log("guessFileInfos: ", guessFileInfos);
+  return at3
+    .guessTrackFromFile(file)
+    .then((guessFileInfos) => {
+      if (guessFileInfos.title && guessFileInfos.artistName) {
+        return at3.retrieveTrackInformations(guessFileInfos.title, guessFileInfos.artistName, false, v);
+      } else {
+        return Promise.resolve();
       }
-      return guessFileInfos;
-    } else {
-      if (v) {
-        console.log('Cannot retrieve detailed information from MP3 file');
+    })
+    .then((guessFileInfos) => {
+      if (guessFileInfos) {
+        if (v) {
+          console.log('guessFileInfos: ', guessFileInfos);
+        }
+        return guessFileInfos;
+      } else {
+        if (v) {
+          console.log('Cannot retrieve detailed information from MP3 file');
+        }
       }
-    }
-  });
+    });
 };
 
 /**
-* Simplify a string so it works well as a filename
-* @param {String} string
-* @return {String}
-*/
+ * Simplify a string so it works well as a filename
+ * @param {String} string
+ * @return {String}
+ */
 at3.escapeForFilename = (string) => {
   return _.startCase(_.toLower(_.deburr(string)))
     .replace(/^\.+/, '')
@@ -956,20 +1007,20 @@ at3.escapeForFilename = (string) => {
 };
 
 /**
-* Return a correctly formatted filename for a song.
-* Example: "02 - On Top Of The World"
-* @param title string Title of the song
-* @param artist string Artist
-* @param position int Position on the disk
-* @return string
-*/
+ * Return a correctly formatted filename for a song.
+ * Example: "02 - On Top Of The World"
+ * @param title string Title of the song
+ * @param artist string Artist
+ * @param position int Position on the disk
+ * @return string
+ */
 at3.formatSongFilename = (title, artist, position) => {
   let filename = at3.escapeForFilename(artist) + ' - ';
   if (position) {
-  if (position < 10) {
-    filename += "0";
-  }
-    filename += position + " - ";
+    if (position < 10) {
+      filename += '0';
+    }
+    filename += position + ' - ';
   }
 
   filename += at3.escapeForFilename(title);
@@ -978,25 +1029,25 @@ at3.formatSongFilename = (title, artist, position) => {
 };
 
 /**
-* Create necessary folders for a subpath
-* @param baseFolder {string} The path of the outputfolder
-* @param subPathFormat {string} The subPath format: {artist}/{title}/
-* @param title {string} Title
-* @param artist {string} Artist
-* @return {String} The complete path
-*/
+ * Create necessary folders for a subpath
+ * @param baseFolder {string} The path of the outputfolder
+ * @param subPathFormat {string} The subPath format: {artist}/{title}/
+ * @param title {string} Title
+ * @param artist {string} Artist
+ * @return {String} The complete path
+ */
 at3.createSubPath = (baseFolder, subPathFormat, title, artist) => {
   subPathFormat = subPathFormat.replace(/\{artist\}/g, at3.escapeForFilename(artist));
   subPathFormat = subPathFormat.replace(/\{title\}/g, at3.escapeForFilename(title));
 
   let p = path.join(baseFolder, subPathFormat);
-  if (p.charAt(p.length-1) != path.sep) {
+  if (p.charAt(p.length - 1) != path.sep) {
     p += path.sep;
   }
 
   const folders = subPathFormat.split(path.sep);
   let currentFolder = baseFolder;
-  folders.forEach(f => {
+  folders.forEach((f) => {
     currentFolder = path.join(currentFolder, f);
     if (!fs.existsSync(currentFolder)) {
       fs.mkdirSync(currentFolder);
@@ -1007,16 +1058,16 @@ at3.createSubPath = (baseFolder, subPathFormat, title, artist) => {
 };
 
 /**
-* Download and convert a single URL,
-* retrieve and add tags to the MP3 file
-* @param url
-* @param outputFolder
-* @param callback Callback function
-* @param title string Optional requested title
-* @param infos object Basic infos to tag the file
-* @param v boolean Verbosity
-* @return Event
-*/
+ * Download and convert a single URL,
+ * retrieve and add tags to the MP3 file
+ * @param url
+ * @param outputFolder
+ * @param callback Callback function
+ * @param title string Optional requested title
+ * @param infos object Basic infos to tag the file
+ * @param v boolean Verbosity
+ * @return Event
+ */
 at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => {
   if (v === undefined) {
     v = false;
@@ -1024,7 +1075,7 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
   if (callback === undefined) {
     callback = () => {};
   }
-  if (outputFolder.charAt(outputFolder.length-1) !== path.sep) {
+  if (outputFolder.charAt(outputFolder.length - 1) !== path.sep) {
     outputFolder += path.sep;
   }
   title = title || '';
@@ -1057,42 +1108,53 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
     dl.emit('abort');
   });
 
-  let infosFromString, infosFromFile, infosRequests = [];
+  let infosFromString,
+    infosFromFile,
+    infosRequests = [];
 
   if (infos && infos.deezerId) {
     // If deezer track id is provided, with fetch more information
-    let getMoreInfos = at3.getDeezerTrackInfos(infos.deezerId, v).then((inf) => {
-      infosFromString = inf;
-    }).catch(() => {
-      infosFromString = {
-        title: infos.title,
-        artistName: infos.artistName,
-      }
-    });
+    let getMoreInfos = at3
+      .getDeezerTrackInfos(infos.deezerId, v)
+      .then((inf) => {
+        infosFromString = inf;
+      })
+      .catch(() => {
+        infosFromString = {
+          title: infos.title,
+          artistName: infos.artistName,
+        };
+      });
 
     infosRequests.push(getMoreInfos);
   } else if (infos && infos.spotifyId) {
     // If spotify track id is provided, with fetch more information
-    let getMoreInfos = at3.getSpotifyTrackInfos(infos.spotifyId, v).then((inf) => {
-      infosFromString = inf;
-    }).catch(() => {
-      infosFromString = {
-        title: infos.title,
-        artistName: infos.artistName,
-      }
-    });
+    let getMoreInfos = at3
+      .getSpotifyTrackInfos(infos.spotifyId, v)
+      .then((inf) => {
+        infosFromString = inf;
+      })
+      .catch(() => {
+        infosFromString = {
+          title: infos.title,
+          artistName: infos.artistName,
+        };
+      });
     infosRequests.push(getMoreInfos);
   } else {
     // Try to find information based on video title
-    let getStringInfos = at3.getCompleteInfosFromURL(url, v).then((inf) => {
-      if (title === undefined) {
-        title = inf.originalTitle;
-      }
-      infosFromString = inf;
-      progressEmitter.emit('infos', _.clone(infosFromString));
-    }).catch(() => {
-      // The download must have failed to, and emit an error
-    });
+    let getStringInfos = at3
+      .getCompleteInfosFromURL(url, v)
+      .then((inf) => {
+        if (title === undefined) {
+          title = inf.originalTitle;
+        }
+        infosFromString = inf;
+        progressEmitter.emit('infos', _.clone(infosFromString));
+      })
+      .catch(() => {
+        // The download must have failed to, and emit an error
+      });
 
     infosRequests.push(getStringInfos);
   }
@@ -1120,19 +1182,19 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
       if (infosFromFile) {
         let scoreFromFile = Math.min(
           levenshtein.get(simpleName(infosFromFile.title + ' ' + infosFromFile.artistName), simpleName(title)),
-          levenshtein.get(simpleName(infosFromFile.artistName + ' ' + infosFromFile.title), simpleName(title))
+          levenshtein.get(simpleName(infosFromFile.artistName + ' ' + infosFromFile.title), simpleName(title)),
         );
         let scoreFromString = Math.min(
           levenshtein.get(simpleName(infosFromString.title + ' ' + infosFromString.artistName), simpleName(title)),
-          levenshtein.get(simpleName(infosFromString.artistName + ' ' + infosFromString.title), simpleName(title))
+          levenshtein.get(simpleName(infosFromString.artistName + ' ' + infosFromString.title), simpleName(title)),
         );
 
         if (v) {
-          console.log("Infos from file score: ", scoreFromFile);
-          console.log("Infos from string score: ", scoreFromString);
+          console.log('Infos from file score: ', scoreFromFile);
+          console.log('Infos from string score: ', scoreFromString);
         }
 
-        if (infosFromFile.cover && scoreFromFile < (scoreFromString + Math.ceil(simpleName(title).length/10.0))) {
+        if (infosFromFile.cover && scoreFromFile < scoreFromString + Math.ceil(simpleName(title).length / 10.0)) {
           infos = infosFromFile;
         }
       }
@@ -1143,38 +1205,45 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
         console.log('Final infos: ', infos);
       }
 
-      at3.findLyrics(infos.title, infos.artistName).then((lyrics) => {
-        return new Promise((resolve, reject) => {
-          fs.writeFile(tempFile + '.lyrics', lyrics, (error) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve();
-            }
+      at3
+        .findLyrics(infos.title, infos.artistName)
+        .then((lyrics) => {
+          return new Promise((resolve, reject) => {
+            fs.writeFile(tempFile + '.lyrics', lyrics, (error) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
           });
+        })
+        .then(() => {
+          infos.lyrics = tempFile + '.lyrics';
+        })
+        .catch(() => {
+          // no lyrics
+        })
+        .finally(() => {
+          return at3.tagFile(tempFile, infos);
+        })
+        .then(() => {
+          let finalFile = outputFolder;
+          finalFile += at3.formatSongFilename(infos.title, infos.artistName, infos.position) + '.mp3';
+          fs.moveSync(tempFile, finalFile, { overwrite: true });
+          if (infos.lyrics) {
+            fs.unlinkSync(tempFile + '.lyrics');
+          }
+          const finalInfos = {
+            infos: infos,
+            file: finalFile,
+          };
+          progressEmitter.emit('end', finalInfos);
+          callback(finalInfos);
+        })
+        .catch((err) => {
+          progressEmitter.emit('error', err);
         });
-      }).then(() => {
-        infos.lyrics = tempFile + '.lyrics';
-      }).catch(() => {
-        // no lyrics
-      }).finally(() => {
-        return at3.tagFile(tempFile, infos);
-      }).then(() => {
-        let finalFile = outputFolder;
-        finalFile += at3.formatSongFilename(infos.title, infos.artistName, infos.position) + '.mp3';
-        fs.moveSync(tempFile, finalFile, { overwrite: true });
-        if (infos.lyrics) {
-          fs.unlinkSync(tempFile + '.lyrics');
-        }
-        const finalInfos = {
-          infos: infos,
-          file: finalFile,
-        };
-        progressEmitter.emit('end', finalInfos);
-        callback(finalInfos);
-      }).catch((err) => {
-        progressEmitter.emit('error', err);
-      });
     });
   });
 
@@ -1182,13 +1251,13 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
 };
 
 /**
-* Search a query on YouTube and return the detailed results
-* @param query string
-* @param regionCode string ISO 3166-1 alpha-2 country code (ex: FR, US)
-* @param relevanceLanguage string ISO 639-1 two-letter language code (ex: en: fr)
-* @param v boolean Verbosity
-* @return Promise
-*/
+ * Search a query on YouTube and return the detailed results
+ * @param query string
+ * @param regionCode string ISO 3166-1 alpha-2 country code (ex: FR, US)
+ * @param relevanceLanguage string ISO 639-1 two-letter language code (ex: en: fr)
+ * @param v boolean Verbosity
+ * @return Promise
+ */
 at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
   if (v === undefined) {
     v = false;
@@ -1198,11 +1267,11 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
   }
 
   /**
-  * Remove useless information in the title
-  * like (audio only), (lyrics)...
-  * @param title string
-  * @return string
-  */
+   * Remove useless information in the title
+   * like (audio only), (lyrics)...
+   * @param title string
+   * @return string
+   */
   const improveTitle = (title) => {
     let useless = [
       'audio only',
@@ -1228,34 +1297,34 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
       'officiel',
       'new song',
       'official video',
-      'official'
+      'official',
     ];
 
     _.forEach(useless, (u) => {
-      title = title.replace(new RegExp('((\\\(|\\\[)?)( ?)' + u + '( ?)((\\\)|\\\])?)', 'gi'), '');
+      title = title.replace(new RegExp('((\\(|\\[)?)( ?)' + u + '( ?)((\\)|\\])?)', 'gi'), '');
     });
 
-    title = title.replace(new RegExp('(\\\(|\\\[)( ?)hd( ?)(\\\)|\\\])', 'gi'), '');
-    title = title.replace(new RegExp('hd','gi'), '');
+    title = title.replace(new RegExp('(\\(|\\[)( ?)hd( ?)(\\)|\\])', 'gi'), '');
+    title = title.replace(new RegExp('hd', 'gi'), '');
     title = _.trim(title);
 
     return title;
-  }
+  };
 
   /**
-  * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
-  * in seconds
-  */
+   * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
+   * in seconds
+   */
   const parseTime = (time) => {
-    time = time.replace('PT','');
+    time = time.replace('PT', '');
     time = time.replace('S', '');
     if (/M/.test(time)) {
       time = time.split('M');
-      return (parseInt(time[0])*60 + (parseInt(time[1]) || 0));
+      return parseInt(time[0]) * 60 + (parseInt(time[1]) || 0);
     } else {
       return parseInt(time[0]);
     }
-  }
+  };
 
   const results = [];
 
@@ -1267,72 +1336,83 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
     localePart = '&relevanceLanguage=' + relevanceLanguage;
   }
   return request({
-    url: 'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' + API_GOOGLE + localePart + '&maxResults=15&q=' + encodeURIComponent(query),
+    url:
+      'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' +
+      API_GOOGLE +
+      localePart +
+      '&maxResults=15&q=' +
+      encodeURIComponent(query),
     json: true,
-  }).then((body) => {
-    if (!body.items || body.items.length === 0) {
-      return Promise.reject();
-    }
-
-    const requests = [];
-
-    _.forEach(body.items, (s) => {
-      if (!s.id.videoId) {
-        return;
+  })
+    .then((body) => {
+      if (!body.items || body.items.length === 0) {
+        return Promise.reject();
       }
 
-      let req = request({
-        url: 'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' + API_GOOGLE + '&id=' + s.id.videoId,
-        json: true,
-      }).then((video) => {
-        video = video.items[0];
-        let ratio = 1.0;
-        if (!video.statistics) {
+      const requests = [];
+
+      _.forEach(body.items, (s) => {
+        if (!s.id.videoId) {
           return;
         }
-        if (video.statistics.dislikeCount > 0) {
-          ratio = video.statistics.likeCount / video.statistics.dislikeCount;
-        }
-        if (ratio === 0) {
-          ratio = 1;
-        }
-        let realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
 
-        results.push({
-          id: video.id,
-          url: 'https://www.youtube.com/watch?v=' + video.id,
-          title: improveTitle(video.snippet.title),
-          hd: (video.contentDetails.definition === 'hd'),
-          duration: parseTime(video.contentDetails.duration),
-          views: parseInt(video.statistics.viewCount),
-          realLike: realLike,
+        let req = request({
+          url:
+            'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' +
+            API_GOOGLE +
+            '&id=' +
+            s.id.videoId,
+          json: true,
+        }).then((video) => {
+          video = video.items[0];
+          let ratio = 1.0;
+          if (!video.statistics) {
+            return;
+          }
+          if (video.statistics.dislikeCount > 0) {
+            ratio = video.statistics.likeCount / video.statistics.dislikeCount;
+          }
+          if (ratio === 0) {
+            ratio = 1;
+          }
+          let realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
+
+          results.push({
+            id: video.id,
+            url: 'https://www.youtube.com/watch?v=' + video.id,
+            title: improveTitle(video.snippet.title),
+            hd: video.contentDetails.definition === 'hd',
+            duration: parseTime(video.contentDetails.duration),
+            views: parseInt(video.statistics.viewCount),
+            realLike: realLike,
+          });
         });
-      });
 
-      requests.push(req);
-    });
-    return Promise.all(requests);
-  }).then(() => results);
+        requests.push(req);
+      });
+      return Promise.all(requests);
+    })
+    .then(() => results);
 };
 
 /**
-* @param song Object Searched song
-* @param videos Array List of videos
-* @param v boolean Verbosity
-*/
+ * @param song Object Searched song
+ * @param videos Array List of videos
+ * @param v boolean Verbosity
+ */
 at3.findBestVideo = (song, videos, v) => {
   if (v === undefined) {
     v = false;
   }
 
   /**
-  * Returns the score of a video, comparing to the request
-  * @param song Object Searched song
-  * @param video object
-  * @param largestRealLike
-  * @param largestViews
-  * @return Object
-  */
+   * Returns the score of a video, comparing to the request
+   * @param song Object Searched song
+   * @param video object
+   * @param largestRealLike
+   * @param largestViews
+   * @return Object
+   */
   const score = (song, video, largestRealLike, largestViews) => {
     // weight of each argument
     let weights = {
@@ -1356,46 +1436,69 @@ at3.findBestVideo = (song, videos, v) => {
     let songArtista = songArtist.split('');
 
     const videoSongTitle = lcs(videoTitlea, songTitlea);
-    if (videoSongTitle.length > 0 && videoSongTitle.startString2 === 0 && videoTitle[videoSongTitle.startString1 + videoSongTitle.length - 1] === ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
-      videoTitle = videoTitle.substring(0, videoSongTitle.startString1) + ' ' + videoTitle.substring(videoSongTitle.startString1 + videoSongTitle.length);
+    if (
+      videoSongTitle.length > 0 &&
+      videoSongTitle.startString2 === 0 &&
+      videoTitle[videoSongTitle.startString1 + videoSongTitle.length - 1] === ' '
+    ) {
+      // The substring must start at the beginning of the song title, and the next char in the video title must be a space
+      videoTitle =
+        videoTitle.substring(0, videoSongTitle.startString1) +
+        ' ' +
+        videoTitle.substring(videoSongTitle.startString1 + videoSongTitle.length);
       videoTitlea = videoTitle.split('');
     }
     const videoSongArtist = lcs(videoTitlea, songArtista);
-    if (videoSongArtist.length > 0 && videoSongArtist.startString2 === 0 && videoTitle[videoSongArtist.startString1 + videoSongArtist.length - 1] === ' ') { // The substring must start at the beginning of the song title, and the next char in the video title must be a space
-      videoTitle = videoTitle.substring(0, videoSongArtist.startString1) + videoTitle.substring(videoSongArtist.startString1 + videoSongArtist.length);
+    if (
+      videoSongArtist.length > 0 &&
+      videoSongArtist.startString2 === 0 &&
+      videoTitle[videoSongArtist.startString1 + videoSongArtist.length - 1] === ' '
+    ) {
+      // The substring must start at the beginning of the song title, and the next char in the video title must be a space
+      videoTitle =
+        videoTitle.substring(0, videoSongArtist.startString1) +
+        videoTitle.substring(videoSongArtist.startString1 + videoSongArtist.length);
     }
 
-
     videoTitle = _.lowerCase(videoTitle);
-    const sTitle = videoTitle.length + (songTitle.length - videoSongTitle.length) + (songArtist.length - videoSongArtist.length);
+    const sTitle =
+      videoTitle.length + (songTitle.length - videoSongTitle.length) + (songArtist.length - videoSongArtist.length);
 
     const videoScore = {
       title: sTitle * weights.title,
       hd: video.hd * weights.hd,
       duration: Math.sqrt(Math.abs(video.duration - duration)) * weights.duration,
-      views: (video.views/largestViews) * weights.views,
-      realLike: (video.realLike/largestRealLike) * weights.realLike || -50, // video.realLike is NaN when the likes has been deactivated, which is a very bad sign
+      views: (video.views / largestViews) * weights.views,
+      realLike: (video.realLike / largestRealLike) * weights.realLike || -50, // video.realLike is NaN when the likes has been deactivated, which is a very bad sign
     };
     video.videoScore = videoScore;
 
     let preVideoScore = videoScore.views + videoScore.realLike - videoScore.title - videoScore.duration;
-    preVideoScore = preVideoScore + Math.abs(preVideoScore)*videoScore.hd;
+    preVideoScore = preVideoScore + Math.abs(preVideoScore) * videoScore.hd;
 
     return preVideoScore;
-  }
+  };
 
-  const largestRealLike = _.reduce(videos, (v, r) => {
-    if (r.realLike > v) {
-      return r.realLike;
-    }
-    return v;
-  }, 0);
-  const largestViews = _.reduce(videos, (v, r) => {
-    if (r.views > v) {
-      return r.views;
-    }
-    return v;
-  }, 0);
+  const largestRealLike = _.reduce(
+    videos,
+    (v, r) => {
+      if (r.realLike > v) {
+        return r.realLike;
+      }
+      return v;
+    },
+    0,
+  );
+  const largestViews = _.reduce(
+    videos,
+    (v, r) => {
+      if (r.views > v) {
+        return r.views;
+      }
+      return v;
+    },
+    0,
+  );
 
   _.forEach(videos, (r) => {
     r.score = score(song, r, largestRealLike, largestViews);
@@ -1404,13 +1507,12 @@ at3.findBestVideo = (song, videos, v) => {
   return _.reverse(_.sortBy(videos, 'score'));
 };
 
-
 /**
-* Try to find the best video matching a song
-* @param song Object Searched song
-* @param v boolean Verbosity
-* @return Promise
-*/
+ * Try to find the best video matching a song
+ * @param song Object Searched song
+ * @param v boolean Verbosity
+ * @return Promise
+ */
 at3.findVideoForSong = (song, v) => {
   if (v === undefined) {
     v = false;
@@ -1424,130 +1526,57 @@ at3.findVideoForSong = (song, v) => {
 
 // [TODO] we could also add a method that just take the first youtube video and download it
 /**
-* Try to find the best video matching a song request
-* @param query string
-* @param v boolean Verbosity
-* @return Promise
-*/
+ * Try to find the best video matching a song request
+ * @param query string
+ * @param v boolean Verbosity
+ * @return Promise
+ */
 at3.findVideo = (query, v) => {
   if (v === undefined) {
     v = false;
   }
 
   // We try to find the song
-  return at3.guessTrackFromString(query, true, false, v).then((guessStringInfos) => {
-    if (guessStringInfos.title && guessStringInfos.artistName) {
-      return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, true, v);
-    } else {
-      return Promise.reject({error: "No song corresponds to your query"});
-    }
-  }).then((song) => {
-    return at3.findVideoForSong(song, v);
-  });
+  return at3
+    .guessTrackFromString(query, true, false, v)
+    .then((guessStringInfos) => {
+      if (guessStringInfos.title && guessStringInfos.artistName) {
+        return at3.retrieveTrackInformations(guessStringInfos.title, guessStringInfos.artistName, true, v);
+      } else {
+        return Promise.reject({ error: 'No song corresponds to your query' });
+      }
+    })
+    .then((song) => {
+      return at3.findVideoForSong(song, v);
+    });
 };
 
 /**
-* Find a song from a query, then download the corresponding video,
-* convert and tag it
-* @param query string
-* @param outputFolder
-* @param callback Callback function
-* @param v boolean Verbosity
-* @return Event
-*/
+ * Find a song from a query, then download the corresponding video,
+ * convert and tag it
+ * @param query string
+ * @param outputFolder
+ * @param callback Callback function
+ * @param v boolean Verbosity
+ * @return Event
+ */
 at3.findAndDownload = (query, outputFolder, callback, v) => {
   if (v === undefined) {
     v = false;
   }
   const progressEmitter = new EventEmitter();
 
-  at3.findVideo(query).then((results) => {
-    if (results.length === 0) {
-      progressEmitter.emit('error', new Error("Cannot find any video matching"));
-      return callback(null, "Cannot find any video matching");
-    }
-    let i = 0;
-    progressEmitter.emit('search-end');
-    let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
-
-    const onDownload = (infos) => {
-      progressEmitter.emit('download', infos);
-    };
-    const onConvert = (infos) => {
-      progressEmitter.emit('convert', infos);
-    };
-    const onInfos = (infos) => {
-      progressEmitter.emit('infos', infos);
-    };
-
-    dl.on('download', onDownload);
-    dl.once('download-end', () => {
-      dl.removeListener('download', onDownload);
-      progressEmitter.emit('download-end');
-    });
-    dl.on('convert', onConvert);
-    dl.once('convert-end', () => {
-      dl.removeListener('convert', onConvert);
-      progressEmitter.emit('convert-end');
-    });
-    dl.on('infos', onInfos);
-    dl.once('error', (error) => {
-      dl.removeListener('download', onDownload);
-      dl.removeListener('convert', onConvert);
-      dl.removeListener('infos', onInfos);
-      // [TODO]: try to download the next video, in case of youtube-dl error only
-      // if (i < results.length) {
-      //     dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
-      // } else {
-        progressEmitter.emit('error', new Error(error));
-      // }
-    });
-    dl.once('end', () => {
-      dl.removeListener('infos', onInfos);
-    });
-  }).catch(() => {
-    progressEmitter.emit('error', new Error("Cannot find any video matching"));
-    return callback(null, "Cannot find any video matching");
-  });
-
-  return progressEmitter;
-};
-
-/**
-* Find videos for a track, and download it
-* @param track trackInfos
-* @param outputFolder
-* @param callback Callback function
-* @param v boolean Verbosity
-* @return Event
-*/
-at3.downloadTrack = (track, outputFolder, callback, v) => {
-  if (v === undefined) {
-    v = false;
-  }
-  const progressEmitter = new EventEmitter();
-  let aborted = false;
-
-  at3.findVideoForSong(track, v).then((results) => {
-    if (aborted) {
-      return;
-    }
-    if (results.length === 0) {
-      progressEmitter.emit('error', new Error("Cannot find any video matching"));
-      return callback(null, "Cannot find any video matching");
-    }
-    let i = 0;
-    progressEmitter.emit('search-end');
-    const dlNext = () => {
-      if (i >= results.length) {
-        progressEmitter.emit('error', new Error("Cannot find any video matching"));
-        return;
+  at3
+    .findVideo(query)
+    .then((results) => {
+      if (results.length === 0) {
+        progressEmitter.emit('error', new Error('Cannot find any video matching'));
+        return callback(null, 'Cannot find any video matching');
       }
-      if (v) {
-        console.log("Will be downloaded:", results[i].url);
-      }
-      let aborted = false;
-      let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
+      let i = 0;
+      progressEmitter.emit('search-end');
+      let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
+
       const onDownload = (infos) => {
         progressEmitter.emit('download', infos);
       };
@@ -1557,6 +1586,7 @@ at3.downloadTrack = (track, outputFolder, callback, v) => {
       const onInfos = (infos) => {
         progressEmitter.emit('infos', infos);
       };
+
       dl.on('download', onDownload);
       dl.once('download-end', () => {
         dl.removeListener('download', onDownload);
@@ -1568,29 +1598,110 @@ at3.downloadTrack = (track, outputFolder, callback, v) => {
         progressEmitter.emit('convert-end');
       });
       dl.on('infos', onInfos);
-      dl.once('end', finalInfos => {
-        dl.removeListener('infos', onInfos);
-        progressEmitter.emit('end', finalInfos);
-      });
-      dl.once('error', (_error) => {
+      dl.once('error', (error) => {
         dl.removeListener('download', onDownload);
         dl.removeListener('convert', onConvert);
         dl.removeListener('infos', onInfos);
-        i += 1;
-        aborted = true;
-        dlNext();
+        // [TODO]: try to download the next video, in case of youtube-dl error only
+        // if (i < results.length) {
+        //     dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
+        // } else {
+        progressEmitter.emit('error', new Error(error));
+        // }
       });
-      progressEmitter.once('abort', () => {
-        if (!aborted) {
-          dl.emit('abort');
+      dl.once('end', () => {
+        dl.removeListener('infos', onInfos);
+      });
+    })
+    .catch(() => {
+      progressEmitter.emit('error', new Error('Cannot find any video matching'));
+      return callback(null, 'Cannot find any video matching');
+    });
+
+  return progressEmitter;
+};
+
+/**
+ * Find videos for a track, and download it
+ * @param track trackInfos
+ * @param outputFolder
+ * @param callback Callback function
+ * @param v boolean Verbosity
+ * @return Event
+ */
+at3.downloadTrack = (track, outputFolder, callback, v) => {
+  if (v === undefined) {
+    v = false;
+  }
+  const progressEmitter = new EventEmitter();
+  let aborted = false;
+
+  at3
+    .findVideoForSong(track, v)
+    .then((results) => {
+      if (aborted) {
+        return;
+      }
+      if (results.length === 0) {
+        progressEmitter.emit('error', new Error('Cannot find any video matching'));
+        return callback(null, 'Cannot find any video matching');
+      }
+      let i = 0;
+      progressEmitter.emit('search-end');
+      const dlNext = () => {
+        if (i >= results.length) {
+          progressEmitter.emit('error', new Error('Cannot find any video matching'));
+          return;
         }
-      });
-    };
-    dlNext();
-  }).catch(() => {
-    progressEmitter.emit('error', new Error("Cannot find any video matching"));
-    return callback(null, "Cannot find any video matching");
-  });
+        if (v) {
+          console.log('Will be downloaded:', results[i].url);
+        }
+        let aborted = false;
+        let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, '', v, track);
+        const onDownload = (infos) => {
+          progressEmitter.emit('download', infos);
+        };
+        const onConvert = (infos) => {
+          progressEmitter.emit('convert', infos);
+        };
+        const onInfos = (infos) => {
+          progressEmitter.emit('infos', infos);
+        };
+        dl.on('download', onDownload);
+        dl.once('download-end', () => {
+          dl.removeListener('download', onDownload);
+          progressEmitter.emit('download-end');
+        });
+        dl.on('convert', onConvert);
+        dl.once('convert-end', () => {
+          dl.removeListener('convert', onConvert);
+          progressEmitter.emit('convert-end');
+        });
+        dl.on('infos', onInfos);
+        dl.once('end', (finalInfos) => {
+          dl.removeListener('infos', onInfos);
+          progressEmitter.emit('end', finalInfos);
+        });
+        dl.once('error', (_error) => {
+          dl.removeListener('download', onDownload);
+          dl.removeListener('convert', onConvert);
+          dl.removeListener('infos', onInfos);
+          i += 1;
+          aborted = true;
+          dlNext();
+        });
+        progressEmitter.once('abort', () => {
+          if (!aborted) {
+            dl.emit('abort');
+          }
+        });
+      };
+      dlNext();
+    })
+    .catch(() => {
+      progressEmitter.emit('error', new Error('Cannot find any video matching'));
+      return callback(null, 'Cannot find any video matching');
+    });
 
   progressEmitter.on('abort', () => {
     aborted = true;
@@ -1600,10 +1711,10 @@ at3.downloadTrack = (track, outputFolder, callback, v) => {
 };
 
 /**
-* Return URLs contained in a playlist (YouTube or SoundCloud)
-* @param url
-* @return Promise(object)
-*/
+ * Return URLs contained in a playlist (YouTube or SoundCloud)
+ * @param url
+ * @return Promise(object)
+ */
 at3.getPlaylistURLsInfos = (url) => {
   let type = at3.guessURLType(url);
 
@@ -1613,7 +1724,7 @@ at3.getPlaylistURLsInfos = (url) => {
     let playlistInfos = {};
     let playlistq = request({
       url: 'https://www.googleapis.com/youtube/v3/playlists?part=snippet&key=' + API_GOOGLE + '&id=' + playlistId,
-      json: true
+      json: true,
     }).then((playlistDetails) => {
       let snippet = playlistDetails.items[0].snippet;
       playlistInfos.title = snippet.title;
@@ -1621,8 +1732,12 @@ at3.getPlaylistURLsInfos = (url) => {
       playlistInfos.cover = snippet.thumbnails.medium.url;
     });
     let playlistItemsq = request({
-      url: 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=' + API_GOOGLE + '&maxResults=50&playlistId=' + playlistId,
-      json: true
+      url:
+        'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=' +
+        API_GOOGLE +
+        '&maxResults=50&playlistId=' +
+        playlistId,
+      json: true,
     }).then((playlistDetails) => {
       let playlistItems = [];
 
@@ -1678,10 +1793,10 @@ at3.getPlaylistURLsInfos = (url) => {
 };
 
 /**
-* Returns info (title, cover, songs) about a playlist (Deezer or Spotify)
-* @param url
-* @return Promise(object)
-*/
+ * Returns info (title, cover, songs) about a playlist (Deezer or Spotify)
+ * @param url
+ * @return Promise(object)
+ */
 at3.getPlaylistTitlesInfos = (url) => {
   // Deezer Playlist
   // Deezer Album
@@ -1726,40 +1841,43 @@ at3.getPlaylistTitlesInfos = (url) => {
 
         return playlist;
       });
-    } else if (regDeezerAlbum.test(url)) { // Deezer Album
+    } else if (regDeezerAlbum.test(url)) {
+      // Deezer Album
       let albumId = url.match(regDeezerAlbum)[1];
       let albumInfos = {};
 
       return request({
         url: 'https://api.deezer.com/album/' + albumId,
         json: true,
-      }).then((ralbumInfos) => {
-        albumInfos.cover = ralbumInfos.cover_big;
-        albumInfos.title = ralbumInfos.title;
-        albumInfos.artistName = ralbumInfos.artist.name;
+      })
+        .then((ralbumInfos) => {
+          albumInfos.cover = ralbumInfos.cover_big;
+          albumInfos.title = ralbumInfos.title;
+          albumInfos.artistName = ralbumInfos.artist.name;
 
-        return request({
-          url: 'https://api.deezer.com/album/' + albumId + '/tracks',
-          json: true,
-        });
-      }).then((albumTracks) => {
-        let items = [];
-
-        _.forEach(albumTracks.data, (track) => {
-          items.push({
-            title: track.title,
-            artistName: track.artist.name,
-            deezerId: track.id,
-            album: albumInfos.title,
-            cover: albumInfos.cover,
-            duration: track.duration,
+          return request({
+            url: 'https://api.deezer.com/album/' + albumId + '/tracks',
+            json: true,
           });
+        })
+        .then((albumTracks) => {
+          let items = [];
+
+          _.forEach(albumTracks.data, (track) => {
+            items.push({
+              title: track.title,
+              artistName: track.artist.name,
+              deezerId: track.id,
+              album: albumInfos.title,
+              cover: albumInfos.cover,
+              duration: track.duration,
+            });
+          });
+
+          albumInfos.items = items;
+
+          return albumInfos;
         });
-
-        albumInfos.items = items;
-
-        return albumInfos;
-      });
     }
   } else if (type === 'spotify') {
     // Spotify Playlist
@@ -1798,7 +1916,8 @@ at3.getPlaylistTitlesInfos = (url) => {
 
         return processSpotifyPage(playlistDetails.tracks);
       });
-    } else if (regSpotifyAlbum.test(url)) { // Spotify Album
+    } else if (regSpotifyAlbum.test(url)) {
+      // Spotify Album
       let albumId = url.match(regSpotifyAlbum)[1];
       let albumInfos = {};
 
@@ -1829,14 +1948,14 @@ at3.getPlaylistTitlesInfos = (url) => {
 };
 
 /**
-* Download a playlist containing URLs
-* @param url {string}
-* @param outputFolder {string}
-* @param callback {Function}
-* @param maxSimultaneous {number} Maximum number of simultaneous track processing
-* @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
-* @return {Event}
-*/
+ * Download a playlist containing URLs
+ * @param url {string}
+ * @param outputFolder {string}
+ * @param callback {Function}
+ * @param maxSimultaneous {number} Maximum number of simultaneous track processing
+ * @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
+ * @return {Event}
+ */
 at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, subPathFormat) => {
   if (maxSimultaneous === undefined) {
     maxSimultaneous = 1;
@@ -1896,7 +2015,7 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
       emitter.emit('end-url', currentIndex);
 
       if (running < maxSimultaneous) {
-        downloadNext(urls, lastIndex+1);
+        downloadNext(urls, lastIndex + 1);
       }
     });
 
@@ -1923,7 +2042,7 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
       dl.removeListener('download', onDownload);
       emitter.emit('download-end', currentIndex);
       if (running < maxSimultaneous) {
-        downloadNext(urls, lastIndex+1);
+        downloadNext(urls, lastIndex + 1);
       }
     });
     dl.on('convert', onConvert);
@@ -1944,7 +2063,7 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
     dl.once('end', () => {
       dl.removeListener('infos', onInfos);
     });
-  }
+  };
 
   emitter.once('abort', () => {
     aborted = true;
@@ -1954,14 +2073,14 @@ at3.downloadPlaylistWithURLs = (url, outputFolder, callback, maxSimultaneous, su
 };
 
 /**
-* Download a playlist containing titles
-* @param url {string}
-* @param outputFolder {string}
-* @param callback {Function}
-* @param maxSimultaneous {number} Maximum number of simultaneous track processing
-* @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
-* @return {Event}
-*/
+ * Download a playlist containing titles
+ * @param url {string}
+ * @param outputFolder {string}
+ * @param callback {Function}
+ * @param maxSimultaneous {number} Maximum number of simultaneous track processing
+ * @param subPathFormat {string} The format of the subfolder: {artist}/{title}/
+ * @return {Event}
+ */
 at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, subPathFormat) => {
   if (maxSimultaneous === undefined) {
     maxSimultaneous = 1;
@@ -2011,87 +2130,101 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
 
     emitter.emit('begin-url', currentIndex);
 
-    at3.findVideoForSong(currentTrack).then((videos) => {
-      if (aborted) {
-        return;
-      }
-      emitter.emit('search-end', currentIndex);
-
-      const downloadFinished = (infos, error) => {
-        if (!infos || error) {
+    at3
+      .findVideoForSong(currentTrack)
+      .then((videos) => {
+        if (aborted) {
           return;
         }
-        currentTrack.file = infos.file;
-        currentTrack.infos = infos.infos;
-        running -= 1;
+        emitter.emit('search-end', currentIndex);
 
-        emitter.emit('end-url', currentIndex);
-
-        if (running < maxSimultaneous) {
-          downloadNext(urls, lastIndex+1);
-        }
-      }
-
-      let i = 0;
-
-      const handleDl = (dl) => {
-        const onDownload = (infos) => {
-          currentTrack.progress.download = infos;
-          emitter.emit('download', currentIndex);
-        };
-        const onConvert = (infos) => {
-          currentTrack.progress.convert = infos;
-          emitter.emit('convert', currentIndex);
-        };
-        const onInfos = (infos) => {
-          currentTrack.infos = infos;
-          emitter.emit('infos', currentIndex);
-        };
-
-        dl.on('download', onDownload);
-        dl.once('download-end', () => {
-          dl.removeListener('download', onDownload);
-          emitter.emit('download-end', currentIndex);
-          if (running < maxSimultaneous) {
-            downloadNext(urls, lastIndex+1);
+        const downloadFinished = (infos, error) => {
+          if (!infos || error) {
+            return;
           }
-        });
-        dl.on('convert', onConvert);
-        dl.once('convert-end', () => {
-          dl.removeListener('convert', onConvert);
-          emitter.emit('convert-end', currentIndex);
-        });
-        dl.on('infos', onInfos);
-        dl.once('end', () => {
-          dl.removeListener('infos', onInfos);
-        });
-        dl.once('error', () => {
-          dl.removeListener('download', onDownload);
-          dl.removeListener('convert', onConvert);
-          if (i < videos.length - 1) {
-            i += 1;
-            handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
-          } else {
-            emitter.emit('error', new Error(currentIndex));
+          currentTrack.file = infos.file;
+          currentTrack.infos = infos.infos;
+          running -= 1;
+
+          emitter.emit('end-url', currentIndex);
+
+          if (running < maxSimultaneous) {
+            downloadNext(urls, lastIndex + 1);
+          }
+        };
+
+        let i = 0;
+
+        const handleDl = (dl) => {
+          const onDownload = (infos) => {
+            currentTrack.progress.download = infos;
+            emitter.emit('download', currentIndex);
+          };
+          const onConvert = (infos) => {
+            currentTrack.progress.convert = infos;
+            emitter.emit('convert', currentIndex);
+          };
+          const onInfos = (infos) => {
+            currentTrack.infos = infos;
+            emitter.emit('infos', currentIndex);
+          };
+
+          dl.on('download', onDownload);
+          dl.once('download-end', () => {
+            dl.removeListener('download', onDownload);
+            emitter.emit('download-end', currentIndex);
             if (running < maxSimultaneous) {
               downloadNext(urls, lastIndex + 1);
             }
-          }
-        });
-        emitter.once('abort', () => {
-          aborted = true;
-          dl.emit('abort');
-        });
-      };
+          });
+          dl.on('convert', onConvert);
+          dl.once('convert-end', () => {
+            dl.removeListener('convert', onConvert);
+            emitter.emit('convert-end', currentIndex);
+          });
+          dl.on('infos', onInfos);
+          dl.once('end', () => {
+            dl.removeListener('infos', onInfos);
+          });
+          dl.once('error', () => {
+            dl.removeListener('download', onDownload);
+            dl.removeListener('convert', onConvert);
+            if (i < videos.length - 1) {
+              i += 1;
+              handleDl(
+                at3.downloadAndTagSingleURL(
+                  videos[i].url,
+                  outputFolder,
+                  downloadFinished,
+                  undefined,
+                  false,
+                  currentTrack,
+                ),
+              );
+            } else {
+              emitter.emit('error', new Error(currentIndex));
+              if (running < maxSimultaneous) {
+                downloadNext(urls, lastIndex + 1);
+              }
+            }
+          });
+          emitter.once('abort', () => {
+            aborted = true;
+            dl.emit('abort');
+          });
+        };
 
-      handleDl(at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack));
-    }).catch(() => {
-      emitter.emit('error', new Error(currentIndex));
-      if (running < maxSimultaneous) {
-        downloadNext(urls, lastIndex + 1);
-      }
-    });
-  }
+        handleDl(
+          at3.downloadAndTagSingleURL(videos[i].url, outputFolder, downloadFinished, undefined, false, currentTrack),
+        );
+      })
+      .catch(() => {
+        emitter.emit('error', new Error(currentIndex));
+        if (running < maxSimultaneous) {
+          downloadNext(urls, lastIndex + 1);
+        }
+      });
+  };
 
   emitter.once('abort', () => {
     aborted = true;
@@ -2101,13 +2234,13 @@ at3.downloadPlaylistWithTitles = (url, outputFolder, callback, maxSimultaneous, 
 };
 
 /**
-* Download a playlist containing urls or titles
-* @param url {string}
-* @param outputFolder {string}
-* @param callback {Function}
-* @param maxSimultaneous {number} Maximum number of simultaneous track processing
-* @return {Event}
-*/
+ * Download a playlist containing urls or titles
+ * @param url {string}
+ * @param outputFolder {string}
+ * @param callback {Function}
+ * @param maxSimultaneous {number} Maximum number of simultaneous track processing
+ * @return {Event}
+ */
 at3.downloadPlaylist = (url, outputFolder, callback, maxSimultaneous, subPathFormat) => {
   const type = at3.guessURLType(url);
   const sitesTitles = ['deezer', 'spotify'];
@@ -2119,18 +2252,18 @@ at3.downloadPlaylist = (url, outputFolder, callback, maxSimultaneous, subPathFor
     return at3.downloadPlaylistWithURLs(url, outputFolder, callback, maxSimultaneous, subPathFormat);
   } else {
     callback(null, 'Website not supported yet');
-    return (new EventEmitter()).emit('error', new Error('Website not supported yet'));
+    return new EventEmitter().emit('error', new Error('Website not supported yet'));
   }
 };
 
 /**
-* Download a track from an URL
-* @param url
-* @param outputFolder
-* @param callback
-* @param v boolean Verbose
-* @return Event
-*/
+ * Download a track from an URL
+ * @param url
+ * @param outputFolder
+ * @param callback
+ * @param v boolean Verbose
+ * @return Event
+ */
 at3.downloadTrackURL = (url, outputFolder, callback, v) => {
   if (v === undefined) {
     v = false;
@@ -2144,7 +2277,7 @@ at3.downloadTrackURL = (url, outputFolder, callback, v) => {
       const track = {
         title: trackInfos.name,
         artistName: trackInfos.artists[0].name,
-        duration: Math.ceil(trackInfos.duration_ms/1000),
+        duration: Math.ceil(trackInfos.duration_ms / 1000),
         spotifyId: trackId,
         cover: trackInfos.album.images[0].url,
       };
@@ -2154,13 +2287,12 @@ at3.downloadTrackURL = (url, outputFolder, callback, v) => {
     });
   } else if (type === 'deezer') {
     const trackId = url.match(/\/track\/([0-9]+)/)[1];
-    at3.getDeezerTrackInfos(trackId, v).then(trackInfos => {
+    at3.getDeezerTrackInfos(trackId, v).then((trackInfos) => {
       const e = at3.downloadTrack(trackInfos, outputFolder, callback, v);
 
       at3.forwardEvents(e, emitter);
     });
   }
-
 
   return emitter;
 };
@@ -2172,7 +2304,19 @@ at3.downloadTrackURL = (url, outputFolder, callback, v) => {
  * @return e2
  */
 at3.forwardEvents = (e1, e2) => {
-  const events = ['download', 'download-end', 'convert', 'convert-end', 'infos', 'error', 'playlist-infos', 'begin-url', 'end-url', 'end', 'search-end'];
+  const events = [
+    'download',
+    'download-end',
+    'convert',
+    'convert-end',
+    'infos',
+    'error',
+    'playlist-infos',
+    'begin-url',
+    'end-url',
+    'end',
+    'search-end',
+  ];
   events.forEach((e) => {
     e1.on(e, (data) => {
       e2.emit(e, data);
@@ -2185,11 +2329,11 @@ at3.forwardEvents = (e1, e2) => {
 };
 
 /**
-* Return the suggested songs for the query
-* @param query string
-* @param limit number
-* @return Promise<array<trackInfos>> Array of potential songs
-*/
+ * Return the suggested songs for the query
+ * @param query string
+ * @param limit number
+ * @return Promise<array<trackInfos>> Array of potential songs
+ */
 at3.suggestedSongs = (query, limit) => {
   if (!limit) {
     limit = 5;
@@ -2209,14 +2353,14 @@ at3.suggestedSongs = (query, limit) => {
       };
     });
   });
-}
+};
 
 /**
-* Return the suggested albums for the query
-* @param query string
-* @param limit number
-* @return Promise<array<Object>> Array of potential albums
-*/
+ * Return the suggested albums for the query
+ * @param query string
+ * @param limit number
+ * @return Promise<array<Object>> Array of potential albums
+ */
 at3.suggestedAlbums = (query, limit) => {
   if (!limit) {
     limit = 5;
@@ -2237,13 +2381,13 @@ at3.suggestedAlbums = (query, limit) => {
       };
     });
   });
-}
+};
 
 /**
-* Return the type of the query
-* @param query string
-* @return string: text, single-url, playlist-url, track-url, not-supported
-*/
+ * Return the type of the query
+ * @param query string
+ * @return string: text, single-url, playlist-url, track-url, not-supported
+ */
 at3.typeOfQuery = (query) => {
   if (!at3.isURL(query)) {
     return 'text';
@@ -2277,10 +2421,10 @@ at3.typeOfQuery = (query) => {
 };
 
 /**
-* Return URL type
-* @param url
-* @return string
-*/
+ * Return URL type
+ * @param url
+ * @return string
+ */
 at3.guessURLType = (url) => {
   if (/^(https?:\/\/)?((www|m)\.)?((youtube\.([a-z]{2,4}))|(youtu\.be))/.test(url)) {
     return 'youtube';
@@ -2305,23 +2449,24 @@ const vsimpleName = (text, exact) => {
   if (!exact) {
     // text = text.replace('feat', '');
   }
-  text = text.replace(/((\[)|(\())?radio edit((\])|(\)))?/ig, '');
-  text = text.replace(/[^a-zA-Z0-9]/ig, '');
+  text = text.replace(/((\[)|(\())?radio edit((\])|(\)))?/gi, '');
+  text = text.replace(/[^a-zA-Z0-9]/gi, '');
   return text;
 };
 const delArtist = (artist, text, exact) => {
   if (exact === undefined) {
     exact = false;
   }
-  if (vsimpleName(artist).length <= 2) { // Artist with a very short name (Mathieu Chedid - M)
+  if (vsimpleName(artist).length <= 2) {
+    // Artist with a very short name (Mathieu Chedid - M)
     return vsimpleName(text, exact);
   } else {
     // [TODO] Improve, escape regex special caracters in vsimpleName(artist)
-    return vsimpleName(text, exact).replace(new RegExp(vsimpleName(artist),'ig'), '');
+    return vsimpleName(text, exact).replace(new RegExp(vsimpleName(artist), 'ig'), '');
   }
 };
 const simpleName = (text) => {
   return text.replace(/\(.+\)/g, '');
-}
+};
 
 module.exports = at3;
