@@ -15,23 +15,30 @@ const util = require('util');
 //     console.log(infos);
 // });
 // not working URL https://www.youtube.com/watch?v=yzi-7G2u89g
-// var dl = alltomp3.findAndDownload('mika elle me dit', 'mp3', () => {});
-// dl.on('download', function(infos) {
-//     process.stdout.cursorTo(0);
-//     process.stdout.clearLine(1);
-//     process.stdout.write(infos.progress + '%');
+// var dl = alltomp3.findAndDownload("mika elle me dit", "./", () => {}, true);
+// dl.on("download", function (infos) {
+//   process.stdout.cursorTo(0);
+//   process.stdout.clearLine(1);
+//   process.stdout.write(infos.progress + "%");
 // });
-// dl.on('download-end', function() {
-//     console.log('Download end');
+// dl.on("download-end", function () {
+//   console.log("Download end");
 // });
-// dl.on('convert', function(infos) {
-//     process.stdout.cursorTo(0);
-//     process.stdout.clearLine(1);
-//     process.stdout.write(infos.progress + '%');
+// dl.on("convert", function (infos) {
+//   process.stdout.cursorTo(0);
+//   process.stdout.clearLine(1);
+//   process.stdout.write(infos.progress + "%");
 // });
-// dl.on('error', function (e) {
-//   console.log('Error la la', util.inspect(e));
+// dl.on("error", function (e) {
+//   console.log("Error la la", util.inspect(e));
 // });
+
+// alltomp3.getInfosWithYoutubeDl('https://www.youtube.com/watch?v=sX9s-bSOYxk').then(console.log);
+
+// const dl = alltomp3.downloadWithYoutubeDl('https://www.youtube.com/watch?v=sX9s-bSOYxk', 'test.mp3');
+// dl.on('download-progress', console.log);
+// dl.once('download-end', console.log);
+// dl.on('error', console.error);
 
 // alltomp3.guessTrackFromString('Imagine Dragons - On Top of the World - Lyrics', false, false, true);
 // alltomp3.guessTrackFromString('C2C - Happy Ft. D.Martin', false, false, true);
@@ -48,9 +55,15 @@ const util = require('util');
 //     alltomp3.tagFile('./test.mp3', infos);
 // });
 
-// alltomp3.downloadAndTagSingleURL('https://www.youtube.com/watch?v=6yx18TYmCAk', './', function(infos) {
+// alltomp3.downloadAndTagSingleURL(
+//   'https://www.youtube.com/watch?v=sX9s-bSOYxk',
+//   './',
+//   function (infos) {
 //     console.log(infos);
-// });
+//   },
+//   undefined,
+//   true,
+// );
 
 // var title = "hide and seek imogen heap";
 // alltomp3.findVideo(title).then(function(results) {
@@ -101,31 +114,31 @@ const util = require('util');
 //     console.log('Got infos: ', infos);
 // });
 
-// var dl = alltomp3.findAndDownload("imagine dragons on top of the world", "./mp3/", function (infos) {
-//     console.log("It's finished: ", infos);
-// });
-// dl.on('search-end', function() {
-//     console.log('Search end');
-// });
-// dl.on('download', function(infos) {
-//     process.stdout.cursorTo(0);
-//     process.stdout.clearLine(1);
-//     process.stdout.write(infos.progress + '%');
-// });
-// dl.on('download-end', function() {
-//     console.log('', 'Download end');
-// });
-// dl.on('convert', function(infos) {
-//     process.stdout.cursorTo(0);
-//     process.stdout.clearLine(1);
-//     process.stdout.write(infos.progress + '%');
-// });
-// dl.on('convert-end', function() {
-//     console.log('', 'Convert end');
-// });
-// dl.on('infos', function(infos) {
-//     console.log('New infos received: ', infos);
-// });
+var dl = alltomp3.findAndDownload('imagine dragons on top of the world', './mp3/', function (infos) {
+  console.log("It's finished: ", infos);
+});
+dl.on('search-end', function () {
+  console.log('Search end');
+});
+dl.on('download', function (infos) {
+  process.stdout.cursorTo(0);
+  process.stdout.clearLine(1);
+  process.stdout.write(infos.progress + '%');
+});
+dl.on('download-end', function () {
+  console.log('', 'Download end');
+});
+dl.on('convert', function (infos) {
+  process.stdout.cursorTo(0);
+  process.stdout.clearLine(1);
+  process.stdout.write(infos.progress + '%');
+});
+dl.on('convert-end', function () {
+  console.log('', 'Convert end');
+});
+dl.on('infos', function (infos) {
+  console.log('New infos received: ', infos);
+});
 
 // alltomp3.guessTrackFromString('Imagine Dragons - On Top of the World - Lyrics').then(function(infos) {
 //     console.log(infos);
@@ -157,42 +170,42 @@ const util = require('util');
 //     console.log(items);
 // });
 
-var urls;
-var dl = alltomp3.downloadPlaylist("https://open.spotify.com/album/2tVnLYqhc0iGdSCLxoaLjD", "./mp3/", function (urls) {
-    console.log("It's finished: ", urls);
-}, 8);
-dl.on('search-end', function() {
-    console.log('Search end');
-});
-dl.on('download', function(index) {
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(1);
-    process.stdout.write(urls.items[index].progress.download.progress + '%');
-});
-dl.on('download-end', function() {
-    console.log('', 'Download end');
-});
-dl.on('convert', function(index) {
-    process.stdout.cursorTo(0);
-    process.stdout.clearLine(1);
-    process.stdout.write(urls.items[index].progress.convert.progress + '%');
-});
-dl.on('convert-end', function(index) {
-    console.log('', 'Convert end');
-});
-dl.on('error', function(index) {
-    console.log('', 'Error with ' + index);
-});
-dl.on('infos', function(index) {
-    // console.log('New infos received: ', infos);
-});
-dl.on('playlist-infos', function(urlss) {
-    urls = urlss;
-    console.log('URLs received: ', urlss);
-});
-dl.on('begin-url', function(index) {
-    console.log('Begin: ', index);
-});
-dl.on('end-url', function(index) {
-    console.log('End: ', index);
-});
+// var urls;
+// var dl = alltomp3.downloadPlaylist("https://open.spotify.com/album/2tVnLYqhc0iGdSCLxoaLjD", "./mp3/", function (urls) {
+//     console.log("It's finished: ", urls);
+// }, 8);
+// dl.on('search-end', function() {
+//     console.log('Search end');
+// });
+// dl.on('download', function(index) {
+//     process.stdout.cursorTo(0);
+//     process.stdout.clearLine(1);
+//     process.stdout.write(urls.items[index].progress.download.progress + '%');
+// });
+// dl.on('download-end', function() {
+//     console.log('', 'Download end');
+// });
+// dl.on('convert', function(index) {
+//     process.stdout.cursorTo(0);
+//     process.stdout.clearLine(1);
+//     process.stdout.write(urls.items[index].progress.convert.progress + '%');
+// });
+// dl.on('convert-end', function(index) {
+//     console.log('', 'Convert end');
+// });
+// dl.on('error', function(index) {
+//     console.log('', 'Error with ' + index);
+// });
+// dl.on('infos', function(index) {
+//     // console.log('New infos received: ', infos);
+// });
+// dl.on('playlist-infos', function(urlss) {
+//     urls = urlss;
+//     console.log('URLs received: ', urlss);
+// });
+// dl.on('begin-url', function(index) {
+//     console.log('Begin: ', index);
+// });
+// dl.on('end-url', function(index) {
+//     console.log('End: ', index);
+// });

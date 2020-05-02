@@ -1,4 +1,4 @@
-const youtubedl = require('youtube-dl');
+const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs-extra');
@@ -264,63 +264,42 @@ at3.requestSpotify = (url) => {
 };
 
 /**
- * Download a single video with youtube-dl
+ * Download a single video
  * @param url
  * @param outputFile
  * @return Event
  */
 at3.downloadWithYoutubeDl = (url, outputFile) => {
-  const download = youtubedl(url, ['-f', 'bestaudio/best', '--no-check-certificate'], { maxBuffer: Infinity });
+  const download = ytdl(url, { quality: 'highestaudio' });
+  download.pipe(fs.createWriteStream(outputFile));
   const downloadEmitter = new EventEmitter();
   let aborted = false;
 
-  let size = 0;
-  download.once('info', (info) => {
-    size = info.size;
-
-    downloadEmitter.emit('download-start', {
-      size: size,
+  const onProgress = (_chunk, nbDownloaded, nbTotal) => {
+    const percent = ((nbDownloaded / nbTotal) * 100).toFixed(2);
+    downloadEmitter.emit('download-progress', {
+      progress: percent,
     });
-
-    download.pipe(fs.createWriteStream(outputFile));
-  });
-
-  let pos = 0;
-  const onData = (chunk) => {
-    if (aborted) {
-      abort();
-    }
-    pos += chunk.length;
-
-    if (size) {
-      let percent = ((pos / size) * 100).toFixed(2);
-
-      downloadEmitter.emit('download-progress', {
-        downloaded: pos,
-        progress: percent,
-      });
-    }
   };
-  download.on('data', onData);
+
+  download.on('progress', onProgress);
 
   download.once('end', () => {
     if (aborted) {
       return;
     }
-    download.removeListener('data', onData);
+    download.removeListener('progress', onProgress);
     downloadEmitter.emit('download-end');
   });
 
   download.once('error', (error) => {
-    download.removeListener('data', onData);
+    download.removeListener('progress', onProgress);
     downloadEmitter.emit('error', new Error(error));
   });
 
   const abort = () => {
     aborted = true;
-    if (download._source && download._source.stream) {
-      download._source.stream.abort();
-    }
+    download.abort();
     if (fs.existsSync(outputFile)) {
       fs.unlinkSync(outputFile);
     }
@@ -403,24 +382,33 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
 };
 
 /**
- * Get infos about an online video with youtube-dl
+ * Get infos about an online video
  * @param url
  * @return Promise
  */
 at3.getInfosWithYoutubeDl = (url) => {
-  return new Promise((resolve, reject) => {
-    youtubedl.getInfo(url, ['--no-check-certificate'], (err, infos) => {
-      if (err || infos === undefined) {
-        reject();
-      } else {
-        resolve({
-          title: infos.title,
-          author: infos.uploader,
-          picture: infos.thumbnail,
-        });
-      }
-    });
+  return ytdl.getBasicInfo(url).then((infos) => {
+    const thumbnails = infos.player_response.videoDetails.thumbnail.thumbnails;
+
+    return {
+      title: infos.title,
+      author: infos.author.name,
+      picture: thumbnails[thumbnails.length - 1].url,
+    };
   });
+
+  //   youtubedl.getInfo(url, ['--no-check-certificate'], (err, infos) => {
+  //     if (err || infos === undefined) {
+  //       reject();
+  //     } else {
+  //       resolve({
+  //         title: infos.title,
+  //         author: infos.uploader,
+  //         picture: infos.thumbnail,
+  //       });
+  //     }
+  //   });
+  // });
 };
 
 /**
@@ -1604,7 +1592,7 @@ at3.findAndDownload = (query, outputFolder, callback, v) => {
         dl.removeListener('download', onDownload);
         dl.removeListener('convert', onConvert);
         dl.removeListener('infos', onInfos);
-        // [TODO]: try to download the next video, in case of youtube-dl error only
+        // [TODO]: try to download the next video, in case of ytdl error only
         // if (i < results.length) {
         //     dl = at3.downloadAndTagSingleURL(results[i++].url, outputFolder, callback, query);
         // } else {
