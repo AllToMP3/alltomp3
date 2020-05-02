@@ -20,7 +20,7 @@ const lcs = require('longest-common-substring');
 
 // API keys
 const API_ACOUSTID = 'lm59lNN597';
-const API_GOOGLE = 'AIzaSyBCshUQSpLKuhmfE5Jc-LEm6vH-sab5Vl8';
+const API_GOOGLE = 'AIzaSyAganIj8BaYPKCJmIKFP2G5NQx2B0ksWZE';
 const API_SOUNDCLOUD = 'dba290d84e6ca924414c91ac12fc3c8f';
 const API_SPOTIFY = 'ODNiZjMzMmQ4MDI1NGNlNzhkNjNkOWM2ZWM2N2M5ZTU6Mzg4OTIxY2M0ZjEyNGEwYWFjM2NiMzIzYTNiZGVlYmU=';
 
@@ -182,10 +182,7 @@ at3.findLyrics = (title, artistName) => {
         let currentScore = levenshtein.get(artistName, artist);
         if (closestScore === -1 || currentScore < closestScore) {
           closestScore = currentScore;
-          closestLink = $(e)
-            .find('a')
-            .last()
-            .attr('href');
+          closestLink = $(e).find('a').last().attr('href');
         }
       });
       if (!closestLink) {
@@ -883,7 +880,12 @@ at3.tagFile = (file, infos) => {
                   .then((result) => {
                     let crop = result.topCrop;
                     return coverFile
-                      .extract({ width: crop.width, height: crop.height, left: crop.x, top: crop.y })
+                      .extract({
+                        width: crop.width,
+                        height: crop.height,
+                        left: crop.x,
+                        top: crop.y,
+                      })
                       .toFile(tempCoverPath);
                   })
                   .then(() => {
@@ -1567,7 +1569,7 @@ at3.findAndDownload = (query, outputFolder, callback, v) => {
   const progressEmitter = new EventEmitter();
 
   at3
-    .findVideo(query)
+    .findVideo(query, v)
     .then((results) => {
       if (results.length === 0) {
         progressEmitter.emit('error', new Error('Cannot find any video matching'));

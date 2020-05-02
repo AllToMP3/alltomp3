@@ -45,5 +45,8 @@
     "sharp": "^0.20.8",
     "smartcrop-sharp": "git+https://github.com/AllToMP3/smartcrop-sharp.git#9d65314",
     "youtube-dl": "git+https://github.com/AllToMP3/node-youtube-dl.git#0f931a4"
+  },
+  "devDependencies": {
+    "prettier": "^2.0.5"
   }
 }
