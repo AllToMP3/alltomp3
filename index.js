@@ -17,11 +17,11 @@ const Promise = require('bluebird');
 const sharp = require('sharp');
 const smartcrop = require('smartcrop-sharp');
 const ytsr = require('ytsr');
+const ytpl = require('ytpl');
 const lcs = require('longest-common-substring');
 
 // API keys
 const API_ACOUSTID = 'lm59lNN597';
-const API_GOOGLE = 'AIzaSyAganIj8BaYPKCJmIKFP2G5NQx2B0ksWZE';
 const API_SOUNDCLOUD = 'dba290d84e6ca924414c91ac12fc3c8f';
 const API_SPOTIFY = 'ODNiZjMzMmQ4MDI1NGNlNzhkNjNkOWM2ZWM2N2M5ZTU6Mzg4OTIxY2M0ZjEyNGEwYWFjM2NiMzIzYTNiZGVlYmU=';
 
@@ -1662,48 +1662,19 @@ at3.getPlaylistURLsInfos = (url) => {
   if (type === 'youtube') {
     let playlistId = url.match(/list=([0-9a-zA-Z_-]+)/);
     playlistId = playlistId[1];
-    let playlistInfos = {};
-    let playlistq = request({
-      url: 'https://www.googleapis.com/youtube/v3/playlists?part=snippet&key=' + API_GOOGLE + '&id=' + playlistId,
-      json: true,
-    }).then((playlistDetails) => {
-      let snippet = playlistDetails.items[0].snippet;
-      playlistInfos.title = snippet.title;
-      playlistInfos.artistName = snippet.channelTitle;
-      playlistInfos.cover = snippet.thumbnails.medium.url;
-    });
-    let playlistItemsq = request({
-      url:
-        'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=' +
-        API_GOOGLE +
-        '&maxResults=50&playlistId=' +
-        playlistId,
-      json: true,
-    }).then((playlistDetails) => {
-      let playlistItems = [];
-
-      _.forEach(playlistDetails.items, (item) => {
-        if (!item.snippet || !item.snippet.thumbnails) {
-          // Video unavailable, like cbixLt0WBQs
-          return;
-        }
-        let highestUrl;
-        _.forEach(['maxres', 'standart', 'high', 'medium', 'default'], (res) => {
-          if (!highestUrl && item.snippet.thumbnails[res]) {
-            highestUrl = item.snippet.thumbnails[res].url;
-          }
-        });
-        playlistItems.push({
-          url: 'http://youtube.com/watch?v=' + item.snippet.resourceId.videoId,
-          title: item.snippet.title,
-          cover: highestUrl,
-        });
-      });
-
-      playlistInfos.items = playlistItems;
-    });
-    return Promise.all([playlistItemsq, playlistq]).then(() => {
-      return playlistInfos;
+    return ytpl(playlistId).then((playlist) => {
+      return {
+        title: playlist.title,
+        cover: playlist.author.avatar,
+        artistName: playlist.author.name,
+        items: playlist.items.map((item) => {
+          return {
+            url: item.url_simple,
+            title: item.title,
+            cover: item.thumbnail,
+          };
+        }),
+      };
     });
   } else if (type === 'soundcloud') {
     return request({
