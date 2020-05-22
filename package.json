@@ -44,7 +44,8 @@
     "request-promise": "^2.0.1",
     "sharp": "^0.20.8",
     "smartcrop-sharp": "git+https://github.com/AllToMP3/smartcrop-sharp.git#9d65314",
-    "ytdl-core": "^2.1.1"
+    "ytdl-core": "^2.1.1",
+    "ytsr": "^0.1.14"
   },
   "devDependencies": {
     "prettier": "^2.0.5"

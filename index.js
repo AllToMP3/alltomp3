@@ -16,6 +16,7 @@ const cheerio = require('cheerio');
 const Promise = require('bluebird');
 const sharp = require('sharp');
 const smartcrop = require('smartcrop-sharp');
+const ytsr = require('ytsr');
 const lcs = require('longest-common-substring');
 
 // API keys
@@ -1252,9 +1253,6 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
   if (v === undefined) {
     v = false;
   }
-  if (regionCode === undefined && relevanceLanguage === undefined) {
-    regionCode = 'US';
-  }
 
   /**
    * Remove useless information in the title
@@ -1301,88 +1299,41 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
     return title;
   };
 
-  /**
-   * Returns an ISO 8601 Time as PT3M6S (=3min and 6seconds)
-   * in seconds
-   */
-  const parseTime = (time) => {
-    time = time.replace('PT', '');
-    time = time.replace('S', '');
-    if (/M/.test(time)) {
-      time = time.split('M');
-      return parseInt(time[0]) * 60 + (parseInt(time[1]) || 0);
-    } else {
-      return parseInt(time[0]);
-    }
-  };
-
-  const results = [];
-
   // We simply search on YouTube
-  let localePart;
-  if (regionCode) {
-    localePart = '&regionCode=' + regionCode;
-  } else if (relevanceLanguage) {
-    localePart = '&relevanceLanguage=' + relevanceLanguage;
-  }
-  return request({
-    url:
-      'https://www.googleapis.com/youtube/v3/search?part=snippet&key=' +
-      API_GOOGLE +
-      localePart +
-      '&maxResults=15&q=' +
-      encodeURIComponent(query),
-    json: true,
-  })
-    .then((body) => {
-      if (!body.items || body.items.length === 0) {
-        return Promise.reject();
-      }
+  return ytsr(query, { limit: 20 }).then(({ items }) => {
+    const videos = items.filter((item) => item.type === 'video');
 
-      const requests = [];
+    if (videos.length === 0) {
+      return Promise.reject();
+    }
 
-      _.forEach(body.items, (s) => {
-        if (!s.id.videoId) {
-          return;
+    return Promise.all(
+      videos.map(async (video) => {
+        const infos = await ytdl.getInfo(video.link);
+
+        let ratio = 1.0;
+        if (infos.dislikes > 0) {
+          ratio = infos.likes / infos.dislikes;
         }
+        if (ratio === 0) {
+          ratio = 1;
+        }
+        const realLike = (infos.likes - infos.dislikes) * ratio;
 
-        let req = request({
-          url:
-            'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&key=' +
-            API_GOOGLE +
-            '&id=' +
-            s.id.videoId,
-          json: true,
-        }).then((video) => {
-          video = video.items[0];
-          let ratio = 1.0;
-          if (!video.statistics) {
-            return;
-          }
-          if (video.statistics.dislikeCount > 0) {
-            ratio = video.statistics.likeCount / video.statistics.dislikeCount;
-          }
-          if (ratio === 0) {
-            ratio = 1;
-          }
-          let realLike = (video.statistics.likeCount - video.statistics.dislikeCount) * ratio;
-
-          results.push({
-            id: video.id,
-            url: 'https://www.youtube.com/watch?v=' + video.id,
-            title: improveTitle(video.snippet.title),
-            hd: video.contentDetails.definition === 'hd',
-            duration: parseTime(video.contentDetails.duration),
-            views: parseInt(video.statistics.viewCount),
-            realLike: realLike,
-          });
-        });
-
-        requests.push(req);
-      });
-      return Promise.all(requests);
-    })
-    .then(() => results);
+        return {
+          id: infos.video_id,
+          url: video.link,
+          title: improveTitle(infos.title),
+          hd: infos.formats.some(
+            ({ qualityLabel }) => qualityLabel && (qualityLabel.startsWith('720p') || qualityLabel.startsWith('1080p')),
+          ),
+          duration: parseInt(infos.length_seconds, 10),
+          views: video.views,
+          realLike,
+        };
+      }),
+    );
+  });
 };
 
 /**
