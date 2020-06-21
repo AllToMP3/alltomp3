@@ -1057,9 +1057,10 @@ at3.createSubPath = (baseFolder, subPathFormat, title, artist) => {
  * @param title string Optional requested title
  * @param infos object Basic infos to tag the file
  * @param v boolean Verbosity
+ * @param options object { bitrate: '256k' } output audio bitrate
  * @return Event
  */
-at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => {
+at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos, options = {}) => {
   if (v === undefined) {
     v = false;
   }
@@ -1070,13 +1071,14 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos) => 
     outputFolder += path.sep;
   }
   title = title || '';
+  const bitrate = options.bitrate || '256k';
 
   const progressEmitter = new EventEmitter();
 
   const tempFile = (at3.tempFolder || outputFolder) + randomstring.generate(10) + '.mp3';
 
   // Download and convert file
-  const dl = at3.downloadSingleURL(url, tempFile, '256k');
+  const dl = at3.downloadSingleURL(url, tempFile, bitrate);
   const onDownload = (infos) => {
     progressEmitter.emit('download', infos);
   };
