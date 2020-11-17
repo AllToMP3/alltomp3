@@ -392,8 +392,8 @@ at3.getInfosWithYoutubeDl = (url) => {
     const thumbnails = infos.player_response.videoDetails.thumbnail.thumbnails;
 
     return {
-      title: infos.title,
-      author: infos.author.name,
+      title: infos.videoDetails.title,
+      author: infos.videoDetails.author.name,
       picture: thumbnails[thumbnails.length - 1].url,
     };
   });
