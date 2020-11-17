@@ -951,6 +951,15 @@ at3.getCompleteInfosFromURL = (url, v) => {
 
       return infosFromString;
     })
+    .then((guessStringInfos) => {
+      if (guessStringInfos.deezerId) {
+        return at3.getDeezerTrackInfos(guessStringInfos.deezerId, v);
+      } else if (guessStringInfos.spotifyId) {
+        return at3.getSpotifyTrackInfos(guessStringInfos.spotifyId, v);
+      } else {
+        return guessStringInfos;
+      }
+    })
     .catch((_error) => {
       // The download must have failed to, and emit an error
     });
