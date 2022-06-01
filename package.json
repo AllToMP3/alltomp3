@@ -42,7 +42,7 @@
     "randomstring": "^1.1.5",
     "request": "^2.88.0",
     "request-promise": "^2.0.1",
-    "sharp": "^0.20.8",
+    "sharp": "^0.30.5",
     "smartcrop-sharp": "git+https://github.com/AllToMP3/smartcrop-sharp.git#9d65314",
     "ytdl-core": "latest",
     "ytpl": "^1.0.1",
