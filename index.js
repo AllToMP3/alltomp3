@@ -1254,7 +1254,7 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos, opt
           // no lyrics
         })
         .finally(() => {
-          return at3;//.tagFile(tempFile, infos);
+          return at3.tagFile(tempFile, infos);
         })
         .then(() => {
           let finalFile = outputFolder;
