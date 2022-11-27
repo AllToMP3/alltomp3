@@ -270,7 +270,12 @@ at3.requestSpotify = (url) => {
  * @param outputFile
  * @return Event
  */
-at3.downloadWithYoutubeDl = (url, outputFile) => {
+at3.downloadWithYoutubeDl = (url, outputFile, v) => {
+
+  if(v === undefined){
+    v = false;
+  }
+
   const download = ytdl(url, { quality: 'highestaudio' });
   download.pipe(fs.createWriteStream(outputFile));
   const downloadEmitter = new EventEmitter();
@@ -318,7 +323,16 @@ at3.downloadWithYoutubeDl = (url, outputFile) => {
  * @param bitrate string
  * @return Event
  */
-at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
+at3.convertInMP3 = (inputFile, outputFile, bitrate, v) => {
+
+  if(v === undefined){
+    v = false;
+  }
+
+  if(v){
+    console.log("Starting to convert to mp3");
+  }
+
   const convertEmitter = new EventEmitter();
   let aborted = false;
   let started = false;
@@ -379,6 +393,10 @@ at3.convertInMP3 = (inputFile, outputFile, bitrate) => {
 
   convertEmitter.once('abort', abort);
 
+  if(v){
+    console.log("Finish to convert to mp3");
+  }
+
   return convertEmitter;
 };
 
@@ -419,13 +437,22 @@ at3.getInfosWithYoutubeDl = (url) => {
  * @param bitrate
  * @return Event
  */
-at3.downloadSingleURL = (url, outputFile, bitrate) => {
+at3.downloadSingleURL = (url, outputFile, bitrate, v) => {
+
+  if(v === undefined){
+    v = false;
+  }
+
   const progressEmitter = new EventEmitter();
   let tempFile = outputFile + '.video';
   let downloadEnded = false;
   let convert;
 
-  const dl = at3.downloadWithYoutubeDl(url, tempFile);
+  if(v){
+    console.log("downloading from url: "+url);
+  }
+
+  const dl = at3.downloadWithYoutubeDl(url, tempFile, v);
   const onDlProgress = (infos) => {
     progressEmitter.emit('download', {
       progress: infos.progress,
@@ -442,7 +469,7 @@ at3.downloadSingleURL = (url, outputFile, bitrate) => {
     dl.removeListener('download-progress', onDlProgress);
     progressEmitter.emit('download-end');
 
-    convert = at3.convertInMP3(tempFile, outputFile, bitrate);
+    convert = at3.convertInMP3(tempFile, outputFile, bitrate, v);
     const onConvertProgress = (infos) => {
       progressEmitter.emit('convert', {
         progress: infos.progress,
@@ -1087,7 +1114,7 @@ at3.downloadAndTagSingleURL = (url, outputFolder, callback, title, v, infos, opt
   const tempFile = (at3.tempFolder || outputFolder) + randomstring.generate(10) + '.mp3';
 
   // Download and convert file
-  const dl = at3.downloadSingleURL(url, tempFile, bitrate);
+  const dl = at3.downloadSingleURL(url, tempFile, bitrate, v);
   const onDownload = (infos) => {
     progressEmitter.emit('download', infos);
   };
@@ -1310,8 +1337,20 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
     return title;
   };
 
+  if(v){
+    console.log("Title improved: " + improveTitle(query));
+  }
+
+  const limit = 10;
+  // 25-11-2022
+  // add a new way to get the results from youtube
+  const results = async function(query){
+    return await ytsr(query, { limit: limit });
+  }
+
   // We simply search on YouTube
-  return ytsr(query, { limit: 20 }).then(({ items }) => {
+  return results(query).then(({ items }) => {
+
     const videos = items.filter((item) => item.type === 'video');
 
     if (videos.length === 0) {
@@ -1320,28 +1359,54 @@ at3.searchOnYoutube = (query, regionCode, relevanceLanguage, v) => {
 
     return Promise.all(
       videos.map(async (video) => {
-        const infos = await ytdl.getInfo(video.link);
 
-        let ratio = 1.0;
-        if (infos.dislikes > 0) {
-          ratio = infos.likes / infos.dislikes;
+        if(v){
+          console.log(video);
         }
-        if (ratio === 0) {
-          ratio = 1;
-        }
-        const realLike = (infos.likes - infos.dislikes) * ratio;
 
-        return {
-          id: infos.video_id,
-          url: video.link,
-          title: improveTitle(infos.title),
-          hd: infos.formats.some(
-            ({ qualityLabel }) => qualityLabel && (qualityLabel.startsWith('720p') || qualityLabel.startsWith('1080p')),
-          ),
-          duration: parseInt(infos.length_seconds, 10),
-          views: video.views,
-          realLike,
-        };
+        // check if the url is contained in the object
+        // [TODO] investigate why the last item is empty
+        if(video.url){
+
+          // 25-11-2022
+          // const infos = await ytdl.getInfo(video.link);
+          // change from video.link to video.id
+          const infos = await ytdl.getInfo(video.url);
+
+          /*if(v){
+            console.log("+ + + + + + Info for: "+video.url+" + + + + + + +");
+            console.log(infos);
+          }*/
+
+          let ratio = 1.0;
+          //if (infos.dislikes > 0) {
+          if (infos.videoDetails.dislikes > 0) {
+            //ratio = infos.likes / infos.dislikes;
+            ratio = infos.videoDetails.likes / infos.videoDetails.dislikes;
+          }
+          if (ratio === 0) {
+            ratio = 1;
+          }
+          //const realLike = (infos.likes - infos.dislikes) * ratio;
+          const realLike = (infos.videoDetails.likes - infos.videoDetails.dislikes) * ratio;
+
+          return {
+            //id: infos.video_id,
+            id: infos.videoDetails.videoId,
+            //url: video.link,
+            url: video.url,
+            //title: improveTitle(infos.title),
+            title: improveTitle(infos.videoDetails.title),
+            hd: infos.formats.some(
+              ({ qualityLabel }) => qualityLabel && (qualityLabel.startsWith('720p') || qualityLabel.startsWith('1080p')),
+            ),
+            //duration: parseInt(infos.length_seconds, 10),
+            duration: parseInt(infos.videoDetails.lengthSeconds, 10),
+            views: video.views,
+            realLike,
+          };
+        }        
+
       }),
     );
   });
@@ -1471,6 +1536,11 @@ at3.findVideoForSong = (song, v) => {
   }
 
   let query = song.title + ' - ' + song.artistName;
+
+  if(v){
+    console.log("Query song: " + query);
+  }
+
   return at3.searchOnYoutube(query, at3.regionCode, at3.relevanceLanguage, v).then((youtubeResults) => {
     return at3.findBestVideo(song, youtubeResults, v);
   });
@@ -1527,6 +1597,11 @@ at3.findAndDownload = (query, outputFolder, callback, v) => {
       }
       let i = 0;
       progressEmitter.emit('search-end');
+
+      if(v){
+        console.log(results);
+      }
+
       let dl = at3.downloadAndTagSingleURL(results[i].url, outputFolder, callback, query);
 
       const onDownload = (infos) => {

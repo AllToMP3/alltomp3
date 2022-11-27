@@ -114,9 +114,9 @@ const util = require('util');
 //     console.log('Got infos: ', infos);
 // });
 
-var dl = alltomp3.findAndDownload('imagine dragons on top of the world', './mp3/', function (infos) {
+var dl = alltomp3.findAndDownload('imagine dragons on top of the world', '../mp3/', function (infos) {
   console.log("It's finished: ", infos);
-});
+}, true);
 dl.on('search-end', function () {
   console.log('Search end');
 });
